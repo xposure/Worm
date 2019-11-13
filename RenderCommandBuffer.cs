@@ -78,6 +78,9 @@ namespace Worm
 
         }
 
+        public int Commands { get; private set; }
+        public int Triangles { get; private set; }
+
         private NativeBuffer _buffer;
 
         public RenderCommandBuffer(IAllocator allocator, int sizeInBytes = 65536)
@@ -147,12 +150,16 @@ namespace Worm
             RenderOperation* cmd = _buffer.Add(new RenderOperation(startIndex, primitiveCount));
         }
 
+
         public void Render(GraphicsDevice device)
         {
+            Commands = 0;
+            Triangles = 0;
             var rawPtr = _buffer.RawPointer;
             Effect currentEffect = null;
             while (rawPtr < _buffer.EndPointer)
             {
+                Commands++;
                 var cmd = (RenderCommand*)rawPtr;
                 switch (cmd->CommandType)
                 {
@@ -207,11 +214,13 @@ namespace Worm
                                 foreach (var pass in technique.Passes)
                                 {
                                     pass.Apply();
+                                    Triangles += renderOp->PrimitiveCount;
                                     device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
                                 }
                             }
                             else
                             {
+                                Triangles += renderOp->PrimitiveCount;
                                 device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
                             }
                             break;

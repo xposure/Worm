@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp2.0/Worm.dll",
+            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.0/Worm.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

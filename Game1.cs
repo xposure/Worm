@@ -114,16 +114,44 @@
 
             renderTimer.Restart();
             var scale = new Scale(1, 1);
+            var color = Color.White;
             _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities) =>
             {
-                for (var i = 0; i < length; i++)
-                    _spriteBatch.AddSprite(_white, positions[i], scale, Color.White);
+                var i = 0;
+                var remainingSprites = length;
+                while (remainingSprites > 0)
+                {
+                    using var bulkSprites = _spriteBatch.TakeSprites(remainingSprites);
+                    remainingSprites -= bulkSprites.Sprites.Length;
+
+                    var sprites = bulkSprites.Sprites;
+                    for (var spriteIndex = 0; spriteIndex < sprites.Length; spriteIndex++, i++)
+                    {
+                        ref var position = ref positions[i];
+                        ref var sprite = ref sprites[spriteIndex];
+
+                        sprite.TL.Position = position;
+                        sprite.TL.Color = color;
+
+                        sprite.TR.Position.X = position.X + scale.Width;
+                        sprite.TR.Position.Y = position.Y;
+                        sprite.TR.Color = color;
+
+                        sprite.BR.Position.X = position.X + scale.Width;
+                        sprite.BR.Position.Y = position.Y + scale.Height;
+                        sprite.BR.Color = color;
+
+                        sprite.BL.Position.X = position.X;
+                        sprite.BL.Position.Y = position.Y + scale.Height;
+                        sprite.BL.Color = color;
+                    }
+                }
             });
             _spriteBatch.Render(spriteBatch);
             renderTimer.Stop();
             _renderAvg += renderTimer;
 
-            Window.Title = $"Update: {_updateAvg}, Render: {_renderAvg} {renderTimer.ElapsedMilliseconds}";
+            Window.Title = $"Update: {_updateAvg}, Render: {_renderAvg} {renderTimer.ElapsedMilliseconds}, Commands: {_spriteBatch.Commands}, Triangles: {_spriteBatch.Triangles}";
 
             base.Draw(gameTime);
         }

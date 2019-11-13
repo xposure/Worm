@@ -9,10 +9,54 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Worm
 {
+    [StructLayout(LayoutKind.Sequential, Pack = 0)]
+
+    public struct SpriteVertex
+    {
+        public Position Position;
+        public Color Color;
+        public TextureCoord TextureCoord;
+
+        public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
+            new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
+            new VertexElement(8, VertexElementFormat.Color, VertexElementUsage.Color, 0),
+            new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
+        );
+    }
+
+
+    [StructLayout(LayoutKind.Sequential, Pack = 0)]
+    public struct Sprite
+    {
+        public SpriteVertex TL;
+        public SpriteVertex TR;
+        public SpriteVertex BL;
+        public SpriteVertex BR;
+    }
+
+    public readonly ref struct BulkSrpiteOperation
+    {
+        private readonly BetterSpriteBatch _batch;
+        public readonly Span<Sprite> Sprites;
+
+        public BulkSrpiteOperation(BetterSpriteBatch batch, Span<Sprite> sprites)
+        {
+            _batch = batch;
+            Sprites = sprites;
+        }
+
+        public void Dispose()
+        {
+            _batch.CompleteBulkOperation(this);
+        }
+    }
+
     public class BetterSpriteBatch : UnmanagedDispose
     {
+
         private const int MAX_PRIMITIVES = 10922;
-        private const int MAX_VERTICES = MAX_PRIMITIVES * 4;
+        private const int MAX_SPRITES = MAX_PRIMITIVES * 2;
+        //private const int MAX_VERTICES = MAX_PRIMITIVES * 4;
         private const int MAX_INDICIES = MAX_PRIMITIVES * 6;
 
         private readonly static ushort[] IndexData;
@@ -33,30 +77,7 @@ namespace Worm
             }
         }
 
-        [StructLayout(LayoutKind.Sequential, Pack = 0)]
 
-        public struct SpriteVertex
-        {
-            public Position Position;
-            public Color Color;
-            public TextureCoord TextureCoord;
-
-            public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
-                new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(8, VertexElementFormat.Color, VertexElementUsage.Color, 0),
-                new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-            );
-        }
-
-
-        [StructLayout(LayoutKind.Sequential, Pack = 0)]
-        public struct Sprite
-        {
-            public SpriteVertex TL;
-            public SpriteVertex TR;
-            public SpriteVertex BL;
-            public SpriteVertex BR;
-        }
 
         private RenderCommandBuffer _renderCommands;
         private BasicEffect _defaultEffect;
@@ -73,25 +94,30 @@ namespace Worm
         private IndexBuffer _indexBuffer;
 
         private int _primitiveCount = 0;
-        private int _vertexPosition = 0;
-        private SpriteVertex[] _vertices;
+        //private int _vertexPosition = 0;
+        private Sprite[] _sprites;
+        private int _spriteIndex = 0;
         private DynamicVertexBuffer _vertexBuffer;
         private ObjectPool<DynamicVertexBuffer> _bufferPool;
         private List<DynamicVertexBuffer> _usedBuffers0 = new List<DynamicVertexBuffer>();
         private List<DynamicVertexBuffer> _usedBuffers1 = new List<DynamicVertexBuffer>();
         private List<VertexBuffer> _allBuffers = new List<VertexBuffer>();
+        private bool _isInBulkOperation = false;
 
         private Viewport _lastViewport = new Viewport();
+
+        public int Triangles => _renderCommands.Triangles;
+        public int Commands => _renderCommands.Commands;
 
         public BetterSpriteBatch(IAllocator allocator, GraphicsDevice device)
         {
             _bufferPool = new ObjectPool<DynamicVertexBuffer>(() =>
             {
-                var buffer = new DynamicVertexBuffer(device, SpriteVertex.VertexDeclaration, MAX_VERTICES, BufferUsage.WriteOnly);
+                var buffer = new DynamicVertexBuffer(device, SpriteVertex.VertexDeclaration, MAX_SPRITES * 4, BufferUsage.WriteOnly);
                 _allBuffers.Add(buffer);
                 return buffer;
             });
-            _vertices = new SpriteVertex[MAX_VERTICES];
+            _sprites = new Sprite[MAX_SPRITES];
             _renderCommands = new RenderCommandBuffer(allocator);
             _device = device;
 
@@ -105,12 +131,13 @@ namespace Worm
             _indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, IndexData.Length, BufferUsage.None);
             _indexBuffer.SetData(IndexData);
 
-            for (var i = 0; i < MAX_VERTICES;)
+            for (var i = 0; i < MAX_SPRITES; ++i)
             {
-                _vertices[i++].TextureCoord = new TextureCoord(0, 0);
-                _vertices[i++].TextureCoord = new TextureCoord(1, 0);
-                _vertices[i++].TextureCoord = new TextureCoord(1, 1);
-                _vertices[i++].TextureCoord = new TextureCoord(0, 1);
+                ref var sprite = ref _sprites[i];
+                sprite.TL.TextureCoord = new TextureCoord(0, 0);
+                sprite.TR.TextureCoord = new TextureCoord(1, 0);
+                sprite.BR.TextureCoord = new TextureCoord(1, 1);
+                sprite.BL.TextureCoord = new TextureCoord(0, 1);
             }
             Reset();
         }
@@ -146,6 +173,7 @@ namespace Worm
 
         public void AddSprite(Texture texture, in Position position, in Scale scale, in Color color)
         {
+            Assert.EqualTo(_isInBulkOperation, false);
             if (_currentTexture != texture)
             {
                 FlushRender();
@@ -153,29 +181,49 @@ namespace Worm
                 _currentTexture = texture;
             }
 
-            ref var tl = ref _vertices[_vertexPosition++];
-            ref var tr = ref _vertices[_vertexPosition++];
-            ref var bl = ref _vertices[_vertexPosition++];
-            ref var br = ref _vertices[_vertexPosition++];
+            ref var sprite = ref _sprites[_spriteIndex++];
 
-            tl.Position = position;
-            tl.Color = color;
+            sprite.TL.Position = position;
+            sprite.TL.Color = color;
 
-            tr.Position.X = position.X + scale.Width;
-            tr.Position.Y = position.Y;
-            tr.Color = color;
+            sprite.TR.Position.X = position.X + scale.Width;
+            sprite.TR.Position.Y = position.Y;
+            sprite.TR.Color = color;
 
-            br.Position.X = position.X + scale.Width;
-            br.Position.Y = position.Y + scale.Height;
-            br.Color = color;
+            sprite.BR.Position.X = position.X + scale.Width;
+            sprite.BR.Position.Y = position.Y + scale.Height;
+            sprite.BR.Color = color;
 
-            bl.Position.X = position.X;
-            bl.Position.Y = position.Y + scale.Height;
-            bl.Color = color;
+            sprite.BL.Position.X = position.X;
+            sprite.BL.Position.Y = position.Y + scale.Height;
+            sprite.BL.Color = color;
 
             _primitiveCount += 2;
 
-            if (_vertexPosition == MAX_VERTICES)
+            if (_spriteIndex == MAX_SPRITES)
+                CompleteBuffer();
+        }
+
+        public BulkSrpiteOperation TakeSprites(int requestCount)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            _isInBulkOperation = true;
+            var remainingSprites = MAX_SPRITES - _spriteIndex;
+            if (remainingSprites > requestCount)
+                return new BulkSrpiteOperation(this, _sprites.AsSpan().Slice(_spriteIndex, requestCount));
+
+            return new BulkSrpiteOperation(this, _sprites.AsSpan().Slice(_spriteIndex, remainingSprites));
+        }
+
+        public void CompleteBulkOperation(BulkSrpiteOperation op)
+        {
+            Assert.EqualTo(_isInBulkOperation, true);
+            _isInBulkOperation = false;
+
+            _spriteIndex += op.Sprites.Length;
+            _primitiveCount += op.Sprites.Length * 2;
+
+            if (_spriteIndex == MAX_SPRITES)
                 CompleteBuffer();
         }
 
@@ -183,7 +231,7 @@ namespace Worm
         {
             if (_primitiveCount > 0)
             {
-                _renderCommands.RenderOp(_vertexPosition - _primitiveCount * 2, _primitiveCount);
+                _renderCommands.RenderOp(_spriteIndex * 4 - _primitiveCount * 2, _primitiveCount);
                 _primitiveCount = 0;
             }
         }
@@ -191,8 +239,9 @@ namespace Worm
         {
             FlushRender();
 
-            _vertexBuffer.SetData(_vertices);//, 0, _vertexPosition, SetDataOptions.Discard);
-            _vertexPosition = 0;
+
+            _vertexBuffer.SetData(_sprites, 0, _spriteIndex, SetDataOptions.Discard);//, 0, _vertexPosition, SetDataOptions.Discard);
+            _spriteIndex = 0;
 
             if (!lastRender)
                 UpdateNextVertexBuffer();
@@ -200,6 +249,7 @@ namespace Worm
 
         public void Render(SpriteBatch batch)
         {
+            Assert.EqualTo(_isInBulkOperation, false);
             UpdateProjection();
             CompleteBuffer(true);
             _renderCommands.Render(_device);
@@ -242,7 +292,7 @@ namespace Worm
             _usedBuffers0.Add(_vertexBuffer);
 
             _renderCommands.SetVertexBuffer(_vertexBuffer);
-            _vertexPosition = 0;
+            _spriteIndex = 0;
             _primitiveCount = 0;
         }
 
