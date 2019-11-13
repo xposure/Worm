@@ -109,16 +109,16 @@
         {
             GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
-            // renderTimer.Restart();
-            // spriteBatch.Begin();
-            // _entities.ForEach((uint entity, ref Position position, ref Color color) =>
-            // {
-            //     spriteBatch.Draw(_white, new Vector2(position.X, position.Y), color);
-            // });
-            // spriteBatch.End();
-            // renderTimer.Stop();
-
-            _spriteBatch.Render();
+            renderTimer.Restart();
+            var scale = new Scale(10, 10);
+            _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities) =>
+            {
+                for (var i = 0; i < length; i++)
+                    _spriteBatch.AddSprite(_white, positions[i], scale, Color.White);
+            });
+            _spriteBatch.Render(spriteBatch);
+            renderTimer.Stop();
+            Window.Title = $"Update: {updateTimer0.Elapsed.TotalMilliseconds}, Render: {renderTimer.Elapsed.TotalMilliseconds}";
 
             base.Draw(gameTime);
         }

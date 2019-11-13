@@ -45,21 +45,21 @@ namespace Worm
             }
         }
 
-        private struct EffectParamMatrix
-        {
-            public CommandTypes CommandType;
-            public int PayloadSize;
-            public int Index;
-            public Matrix Value;
+        // private struct EffectParamMatrix
+        // {
+        //     public CommandTypes CommandType;
+        //     public int PayloadSize;
+        //     public int Index;
+        //     public Matrix Value;
 
-            public EffectParamMatrix(CommandTypes type, int index, Matrix value)
-            {
-                CommandType = type;
-                Index = index;
-                Value = value;
-                PayloadSize = sizeof(int) + sizeof(Matrix);
-            }
-        }
+        //     public EffectParamMatrix(CommandTypes type, int index, Matrix value)
+        //     {
+        //         CommandType = type;
+        //         Index = index;
+        //         Value = value;
+        //         PayloadSize = sizeof(int) + sizeof(Matrix);
+        //     }
+        // }
 
         private struct RenderOperation
         {
@@ -73,7 +73,7 @@ namespace Worm
                 CommandType = CommandTypes.Render;
                 StartIndex = startIndex;
                 PrimitiveCount = primitiveCount;
-                PayloadSize = sizeof(int) * 3;
+                PayloadSize = sizeof(int) * 2;
             }
 
         }
@@ -181,7 +181,8 @@ namespace Worm
                         }
                     case CommandTypes.Texture:
                         {
-                            var it = _textures[((GraphicsStateChange*)cmd)->StateIndex];
+                            var textId = ((GraphicsStateChange*)cmd)->StateIndex;
+                            var it = _textures[textId];
                             device.Textures[0] = it;
                             break;
                         }
@@ -200,10 +201,17 @@ namespace Worm
                     case CommandTypes.Render:
                         {
                             var renderOp = (RenderOperation*)cmd;
-                            var technique = currentEffect.CurrentTechnique;
-                            foreach (var pass in technique.Passes)
+                            if (currentEffect != null)
                             {
-                                pass.Apply();
+                                var technique = currentEffect.CurrentTechnique;
+                                foreach (var pass in technique.Passes)
+                                {
+                                    pass.Apply();
+                                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
+                                }
+                            }
+                            else
+                            {
                                 device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
                             }
                             break;
