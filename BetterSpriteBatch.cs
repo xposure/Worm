@@ -171,7 +171,7 @@ namespace Worm
             }
         }
 
-        public void AddSprite(Texture texture, in Position position, in Scale scale, in Color color)
+        public void SetTexture(Texture texture)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             if (_currentTexture != texture)
@@ -180,23 +180,37 @@ namespace Worm
                 _renderCommands.SetTexture(texture);
                 _currentTexture = texture;
             }
+        }
+
+        public void AddSprite(Texture texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            SetTexture(texture);
 
             ref var sprite = ref _sprites[_spriteIndex++];
 
             sprite.TL.Position = position;
             sprite.TL.Color = color;
+            sprite.TL.TextureCoord.X = texCoord.X0;
+            sprite.TL.TextureCoord.Y = texCoord.Y0;
 
             sprite.TR.Position.X = position.X + scale.Width;
             sprite.TR.Position.Y = position.Y;
             sprite.TR.Color = color;
+            sprite.TR.TextureCoord.X = texCoord.X1;
+            sprite.TR.TextureCoord.Y = texCoord.Y0;
 
             sprite.BR.Position.X = position.X + scale.Width;
             sprite.BR.Position.Y = position.Y + scale.Height;
             sprite.BR.Color = color;
+            sprite.BR.TextureCoord.X = texCoord.X1;
+            sprite.BR.TextureCoord.Y = texCoord.Y1;
 
             sprite.BL.Position.X = position.X;
             sprite.BL.Position.Y = position.Y + scale.Height;
             sprite.BL.Color = color;
+            sprite.BL.TextureCoord.X = texCoord.X0;
+            sprite.BL.TextureCoord.Y = texCoord.Y1;
 
             _primitiveCount += 2;
 

@@ -12,6 +12,21 @@
     using System.Diagnostics;
     using Microsoft.Extensions.Logging;
 
+    // public struct Mass
+    // {
+    //     public float Amount;
+    // }
+
+    // public struct Force
+    // {
+    //     public float Amount;
+    // }
+
+    // public struct Acceleration
+    // {
+    //     public float Amount;
+    // }
+
     public class Game1 : Game
     {
         GraphicsDeviceManager graphics;
@@ -27,6 +42,8 @@
 
         private AvgValue _updateAvg = new AvgValue(0.9f, 1f);
         private AvgValue _renderAvg = new AvgValue(0.9f, 1f);
+
+        private Texture2D _circle;
 
         public Game1()
         {
@@ -52,15 +69,19 @@
             _entities = new EntityManager(_logFactory, _memory);
             _spriteBatch = new BetterSpriteBatch(_memory, GraphicsDevice);
 
+            var maxx = GraphicsDevice.PresentationParameters.BackBufferWidth;
+            var maxy = GraphicsDevice.PresentationParameters.BackBufferHeight;
+
+
             var r = new Random();
             var spec = EntitySpec.Create<Position, Velocity, Color>();
             for (var i = 0; i < 100000; i++)
             {
                 //TODO: bulk insert API
                 var entity = _entities.Create(spec);
-                _entities.Replace(entity, new Position(r.Next(0, 1024), r.Next(0, 1024)));
-                _entities.Replace(entity, new Velocity(r.Next(-5000, 5000), r.Next(-5000, 5000)));
-                _entities.Replace(entity, new Color(r.Next(255), r.Next(255), r.Next(255), 255));
+                _entities.Replace(entity, new Position(r.Next(10, maxx - 10), r.Next(10, maxy - 10)));
+                //_entities.Replace(entity, new Velocity(r.Next(-5000, 5000), r.Next(-5000, 5000)));
+                //_entities.Replace(entity, new Color(r.Next(255), r.Next(255), r.Next(255), 255));
             }
         }
 
@@ -82,24 +103,65 @@
             var maxy = GraphicsDevice.PresentationParameters.BackBufferHeight;
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             updateTimer0.Restart();
-            _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities) =>
+            var mouse = Microsoft.Xna.Framework.Input.Mouse.GetState();
+            var mp = new Vector2(mouse.Position.X, mouse.Position.Y);
+            var explosion = mouse.LeftButton == ButtonState.Pressed;
+            var mousePower = (mouse.LeftButton == ButtonState.Pressed) ? 100000 : 100;
+
+            _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities, Span<Color> colors) =>
             {
                 for (var i = 0; i < length; i++)
                 {
                     ref var position = ref positions[i];
                     ref var velocity = ref velocities[i];
 
-                    position.X += velocity.X * dt;
-                    position.Y += velocity.Y * dt;
+                    var vp = new Vector2(position.X, position.Y);
 
-                    velocity.X -= velocity.X * dt;
-                    velocity.Y -= velocity.Y * dt;
+                    var dstSqr = Vector2.DistanceSquared(vp, mp);
+                    var force = 200f / dstSqr;
+                    if (force < 1)
+                    {
+                        var dir = Vector2.Normalize(vp - mp);
+                        velocity.X += force * mousePower * dir.X;
+                        velocity.Y += force * mousePower * dir.Y;
+                    }
 
-                    if ((position.X > maxx && velocity.X > 0) || (position.X < 0 && velocity.X < 0))
-                        velocity.X = -velocity.X;
+                    colors[i] = Color.Lerp(Color.Red, Color.Green, 1000f / (velocity.X * velocity.X + velocity.Y * velocity.Y));
 
-                    if ((position.Y > maxy && velocity.Y > 0) || (position.Y < 0 && velocity.Y < 0))
-                        velocity.Y = -velocity.Y;
+                    if (velocity.X != 0)
+                    {
+                        position.X += velocity.X * dt;
+                        velocity.X -= velocity.X * dt;
+                        if (velocity.X > 0.0001 && velocity.X < 0.0001) velocity.X = 0;
+                        if ((position.X > maxx - 10 && velocity.X > 0))
+                        {
+                            velocity.X = -velocity.X;
+                            position.X = maxx - 10;
+                        }
+                        if ((position.X < 10 && velocity.X < 0))
+                        {
+                            velocity.X = -velocity.X;
+                            position.X = 10;
+                        }
+                    }
+
+
+                    if (velocity.Y != 0)
+                    {
+                        position.Y += velocity.Y * dt;
+                        velocity.Y -= velocity.Y * dt;
+                        if (velocity.Y > 0.0001 && velocity.Y < 0.0001) velocity.Y = 0;
+                        if ((position.Y > maxy - 10 && velocity.Y > 0))
+                        {
+                            velocity.Y = -velocity.Y;
+                            position.Y = maxy - 10;
+                        }
+                        if ((position.Y < 10 && velocity.Y < 0))
+                        {
+                            velocity.Y = -velocity.Y;
+                            position.Y = 10;
+                        }
+                    }
                 }
             });
             updateTimer0.Stop();
@@ -113,9 +175,8 @@
             GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
             renderTimer.Restart();
-            var scale = new Scale(1, 1);
-            var color = Color.White;
-            _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities) =>
+            var scale = new Scale(5, 5);
+            _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Color> colors) =>
             {
                 var i = 0;
                 var remainingSprites = length;
@@ -128,6 +189,8 @@
                     for (var spriteIndex = 0; spriteIndex < sprites.Length; spriteIndex++, i++)
                     {
                         ref var position = ref positions[i];
+                        ref var color = ref colors[i];
+
                         ref var sprite = ref sprites[spriteIndex];
 
                         sprite.TL.Position = position;
