@@ -25,6 +25,8 @@
         private IAllocator _memory;
         private BetterSpriteBatch _spriteBatch;
 
+        private AvgValue _updateAvg = new AvgValue(0.9f, 1f);
+        private AvgValue _renderAvg = new AvgValue(0.9f, 1f);
 
         public Game1()
         {
@@ -57,7 +59,7 @@
                 //TODO: bulk insert API
                 var entity = _entities.Create(spec);
                 _entities.Replace(entity, new Position(r.Next(0, 1024), r.Next(0, 1024)));
-                _entities.Replace(entity, new Velocity(r.Next(-500, 500), r.Next(-500, 500)));
+                _entities.Replace(entity, new Velocity(r.Next(-5000, 5000), r.Next(-5000, 5000)));
                 _entities.Replace(entity, new Color(r.Next(255), r.Next(255), r.Next(255), 255));
             }
         }
@@ -101,6 +103,7 @@
                 }
             });
             updateTimer0.Stop();
+            _updateAvg += updateTimer0;
 
             base.Update(gameTime);
         }
@@ -110,7 +113,7 @@
             GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
             renderTimer.Restart();
-            var scale = new Scale(10, 10);
+            var scale = new Scale(1, 1);
             _entities.ForChunk((int length, ReadOnlySpan<uint> entities, Span<Position> positions, Span<Velocity> velocities) =>
             {
                 for (var i = 0; i < length; i++)
@@ -118,7 +121,9 @@
             });
             _spriteBatch.Render(spriteBatch);
             renderTimer.Stop();
-            Window.Title = $"Update: {updateTimer0.Elapsed.TotalMilliseconds}, Render: {renderTimer.Elapsed.TotalMilliseconds}";
+            _renderAvg += renderTimer;
+
+            Window.Title = $"Update: {_updateAvg}, Render: {_renderAvg} {renderTimer.ElapsedMilliseconds}";
 
             base.Draw(gameTime);
         }
