@@ -24,9 +24,10 @@ namespace Worm
         {
             public CommandTypes CommandType;
             public int PayloadSize;
-            public void SetPayload<T>()
-                where T : unmanaged
+
+            public RenderCommand(CommandTypes type)
             {
+                CommandType = type;
                 PayloadSize = 0;
             }
         }
