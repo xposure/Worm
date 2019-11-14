@@ -78,7 +78,6 @@ namespace Worm
         }
 
 
-
         private RenderCommandBuffer _renderCommands;
         private BasicEffect _defaultEffect;
         private GraphicsDevice _device;
@@ -86,6 +85,7 @@ namespace Worm
         private DepthStencilState _defaultDepth = DepthStencilState.Default;
         private BlendState _defaultBlend = BlendState.NonPremultiplied;
         private RasterizerState _defaultRasterizer = RasterizerState.CullNone;
+        private SamplerState _defaultSampler = SamplerState.PointClamp;
 
         private Effect Effect => _defaultEffect;
 
@@ -182,6 +182,37 @@ namespace Worm
             }
         }
 
+        public void SetBlendState(BlendState blendState)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetBlendState(blendState);
+        }
+        public void SetDepthState(DepthStencilState depthState)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetDepthState(depthState);
+        }
+        public void SetRasterizerState(RasterizerState rasitizerState)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetRasterizerState(rasitizerState);
+        }
+        public void SetSamplerState(SamplerState samplerState)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetSamplerState(samplerState);
+        }
+        public void SetEffect(Effect effect)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetEffect(effect);
+        }
+
         public void AddSprite(Texture texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
         {
             Assert.EqualTo(_isInBulkOperation, false);
@@ -276,6 +307,7 @@ namespace Worm
             _renderCommands.SetDepthState(_defaultDepth);
             _renderCommands.SetBlendState(_defaultBlend);
             _renderCommands.SetRasterizerState(_defaultRasterizer);
+            _renderCommands.SetSamplerState(_defaultSampler);
             _renderCommands.SetTexture(_defaultTexture);
             _renderCommands.SetEffect(_defaultEffect);
             _renderCommands.SetIndexBuffer(_indexBuffer);

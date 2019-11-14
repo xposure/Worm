@@ -13,6 +13,7 @@ namespace Worm
             Blend,
             Depth,
             Rasterizer,
+            Sampler,
             Effect,
             Texture,
             IndexBuffer,
@@ -113,6 +114,14 @@ namespace Worm
             GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Rasterizer, index));
         }
 
+        private List<SamplerState> _samplerStates = new List<SamplerState>();
+        public void SetSamplerState(SamplerState samplerState)
+        {
+            var index = _samplerStates.Count;
+            _samplerStates.Add(samplerState);
+            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Sampler, index));
+        }
+
         private List<Texture> _textures = new List<Texture>();
         public void SetTexture(Texture texture)
         {
@@ -182,6 +191,12 @@ namespace Worm
                             device.RasterizerState = it;
                             break;
                         }
+                    case CommandTypes.Sampler:
+                        {
+                            var it = _samplerStates[((GraphicsStateChange*)cmd)->StateIndex];
+                            device.SamplerStates[0] = it;
+                            break;
+                        }
                     case CommandTypes.Effect:
                         {
                             currentEffect = _effects[((GraphicsStateChange*)cmd)->StateIndex];
@@ -189,9 +204,11 @@ namespace Worm
                         }
                     case CommandTypes.Texture:
                         {
-                            var textId = ((GraphicsStateChange*)cmd)->StateIndex;
-                            var it = _textures[textId];
-                            device.Textures[0] = it;
+                            var tex = _textures[((GraphicsStateChange*)cmd)->StateIndex];
+                            device.Textures[0] = tex;
+                            if (currentEffect is BasicEffect basic && tex is Texture2D tex2d)
+                                basic.Texture = tex2d;
+
                             break;
                         }
                     case CommandTypes.VertexBuffer:
@@ -234,6 +251,7 @@ namespace Worm
             _blendStates.Clear();
             _depthStates.Clear();
             _rasterizerStates.Clear();
+            _samplerStates.Clear();
             _textures.Clear();
             _effects.Clear();
             _indicies.Clear();
@@ -245,6 +263,7 @@ namespace Worm
             _blendStates.Clear();
             _depthStates.Clear();
             _rasterizerStates.Clear();
+            _samplerStates.Clear();
             _textures.Clear();
             _effects.Clear();
             _indicies.Clear();
