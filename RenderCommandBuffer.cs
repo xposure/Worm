@@ -18,32 +18,33 @@ namespace Worm
             Texture,
             IndexBuffer,
             VertexBuffer,
+            Camera,
             Render
         }
 
         private struct RenderCommand
         {
             public CommandTypes CommandType;
-            public int PayloadSize;
+            public int Size;
 
             public RenderCommand(CommandTypes type)
             {
                 CommandType = type;
-                PayloadSize = 0;
+                Size = sizeof(RenderCommand);
             }
         }
 
         private struct GraphicsStateChange
         {
             public CommandTypes CommandType;
-            public int PayloadSize;
+            public int Size;
             public int StateIndex;
 
             public GraphicsStateChange(CommandTypes type, int stateIndex)
             {
                 CommandType = type;
                 StateIndex = stateIndex;
-                PayloadSize = sizeof(int);
+                Size = sizeof(GraphicsStateChange);
             }
         }
 
@@ -63,10 +64,33 @@ namespace Worm
         //     }
         // }
 
+        public enum CameraType
+        {
+            World,
+            Projection,
+            View
+        }
+
+        private struct CameraOperation
+        {
+            public CommandTypes CommandType;
+            public int Size;
+            public CameraType CameraType;
+            public Matrix Matrix;
+
+            public CameraOperation(CameraType cameraType, Matrix matrix)
+            {
+                CommandType = CommandTypes.Camera;
+                CameraType = cameraType;
+                Matrix = matrix;
+                Size = sizeof(CameraOperation);
+            }
+        }
+
         private struct RenderOperation
         {
             public CommandTypes CommandType;
-            public int PayloadSize;
+            public int Size;
             public int StartIndex;
             public int PrimitiveCount;
 
@@ -75,9 +99,8 @@ namespace Worm
                 CommandType = CommandTypes.Render;
                 StartIndex = startIndex;
                 PrimitiveCount = primitiveCount;
-                PayloadSize = sizeof(int) * 2;
+                Size = sizeof(RenderOperation);
             }
-
         }
 
         public int Commands { get; private set; }
@@ -155,6 +178,11 @@ namespace Worm
             GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.VertexBuffer, index));
         }
 
+        public void SetCamera(CameraType cameraType, Matrix matrix)
+        {
+            CameraOperation* cmd = _buffer.Add(new CameraOperation(cameraType, matrix));
+        }
+
         public void RenderOp(int startIndex, int primitiveCount)
         {
             RenderOperation* cmd = _buffer.Add(new RenderOperation(startIndex, primitiveCount));
@@ -223,6 +251,21 @@ namespace Worm
                             device.Indices = it;
                             break;
                         }
+                    case CommandTypes.Camera:
+                        {
+                            Assert.EqualTo(currentEffect is BasicEffect, true);
+                            var effect = (BasicEffect)currentEffect;
+                            var it = (CameraOperation*)cmd;
+                            if (it->CameraType == CameraType.World)
+                                effect.World = it->Matrix;
+                            else if (it->CameraType == CameraType.View)
+                                effect.View = it->Matrix;
+                            else if (it->CameraType == CameraType.Projection)
+                                effect.Projection = it->Matrix;
+                            else
+                                throw new System.NotImplementedException();
+                            break;
+                        }
                     case CommandTypes.Render:
                         {
                             var renderOp = (RenderOperation*)cmd;
@@ -233,18 +276,18 @@ namespace Worm
                                 {
                                     pass.Apply();
                                     Triangles += renderOp->PrimitiveCount;
-                                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
+                                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
                                 }
                             }
                             else
                             {
                                 Triangles += renderOp->PrimitiveCount;
-                                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, renderOp->StartIndex, renderOp->PrimitiveCount);
+                                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
                             }
                             break;
                         }
                 }
-                rawPtr += cmd->PayloadSize + SizeOf<RenderCommand>.Size;
+                rawPtr += cmd->Size;
             }
 
             _buffer.Reset();

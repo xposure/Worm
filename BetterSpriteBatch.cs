@@ -82,14 +82,14 @@ namespace Worm
         private BasicEffect _defaultEffect;
         private GraphicsDevice _device;
         private Texture2D _defaultTexture;
-        private DepthStencilState _defaultDepth = DepthStencilState.Default;
+        private DepthStencilState _defaultDepth = DepthStencilState.None;
         private BlendState _defaultBlend = BlendState.NonPremultiplied;
         private RasterizerState _defaultRasterizer = RasterizerState.CullNone;
         private SamplerState _defaultSampler = SamplerState.PointClamp;
 
         private Effect Effect => _defaultEffect;
 
-        private Texture _currentTexture = null;
+        private Texture2D _currentTexture = null;
 
         private IndexBuffer _indexBuffer;
 
@@ -105,6 +105,7 @@ namespace Worm
         private bool _isInBulkOperation = false;
 
         private Viewport _lastViewport = new Viewport();
+        private Matrix _projection = Matrix.Identity;
 
         public int Triangles => _renderCommands.Triangles;
         public int Commands => _renderCommands.Commands;
@@ -150,7 +151,7 @@ namespace Worm
             var vp = _device.Viewport;
             if ((_lastViewport.Width != vp.Width) || (_lastViewport.Height != vp.Height))
             {
-                Matrix _projection = Matrix.Identity;
+                _projection = Matrix.Identity;
                 // Normal 3D cameras look into the -z direction (z = 1 is in front of z = 0). The
                 // sprite batch layer depth is the opposite (z = 0 is in front of z = 1).
                 // --> We get the correct matrix with near plane 0 and far plane -1.
@@ -168,10 +169,11 @@ namespace Worm
                 _defaultEffect.View = Matrix.Identity;
 
                 _lastViewport = vp;
+
             }
         }
 
-        public void SetTexture(Texture texture)
+        public void SetTexture(Texture2D texture)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             if (_currentTexture != texture)
@@ -200,6 +202,14 @@ namespace Worm
             FlushRender();
             _renderCommands.SetRasterizerState(rasitizerState);
         }
+
+        public void SetCamera(Matrix matrix)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            FlushRender();
+            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.World, matrix);
+        }
+
         public void SetSamplerState(SamplerState samplerState)
         {
             Assert.EqualTo(_isInBulkOperation, false);
@@ -213,7 +223,119 @@ namespace Worm
             _renderCommands.SetEffect(effect);
         }
 
-        public void AddSprite(Texture texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
+        //MonoGame draw method
+        public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
+            => MonoGameDraw(texture, position, sourceRectangle, color, rotation, origin, new Vector2(scale, scale), effects, layerDepth);
+
+        public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
+        {
+            SetTexture(texture);
+
+            origin = origin * scale;
+            TextureRegion _texCoord = new TextureRegion(0, 0, 1, 1);
+
+
+            var texelWidth = 1f / texture.Width;
+            var texelHeight = 1f / texture.Height;
+            float w, h;
+            if (sourceRectangle.HasValue)
+            {
+                var srcRect = sourceRectangle.GetValueOrDefault();
+                w = srcRect.Width * scale.X;
+                h = srcRect.Height * scale.Y;
+                _texCoord.X0 = srcRect.X * texelWidth;
+                _texCoord.Y0 = srcRect.Y * texelHeight;
+                _texCoord.X1 = (srcRect.X + srcRect.Width) * texelWidth;
+                _texCoord.Y1 = (srcRect.Y + srcRect.Height) * texelHeight;
+            }
+            else
+            {
+                w = texture.Width * scale.X;
+                h = texture.Height * scale.Y;
+                // _texCoord.X0 = 0;
+                // _texCoord.Y0 = 0;
+                // _texCoord.X1 = 1;
+                // _texCoord.Y1 = 1;
+            }
+
+            if ((effects & SpriteEffects.FlipVertically) != 0)
+            {
+                var temp = _texCoord.Y1;
+                _texCoord.Y1 = _texCoord.Y0;
+                _texCoord.Y0 = temp;
+            }
+            if ((effects & SpriteEffects.FlipHorizontally) != 0)
+            {
+                var temp = _texCoord.X1;
+                _texCoord.X1 = _texCoord.X0;
+                _texCoord.X0 = temp;
+            }
+
+            if (rotation == 0f)
+            {
+                var p = new Position(position.X - origin.X, position.Y - origin.Y);
+                var s = new Scale(w, h);
+                AddSprite(texture, p, s, color, _texCoord);
+            }
+            else
+            {
+                MonoGameAddSprite(texture,
+                        position.X,
+                        position.Y,
+                        -origin.X,
+                        -origin.Y,
+                        w,
+                        h,
+                        (float)Math.Sin(rotation),
+                        (float)Math.Cos(rotation),
+                        color,
+                        new Vector2(_texCoord.X0, _texCoord.Y0),
+                        new Vector2(_texCoord.X1, _texCoord.Y1),
+                        layerDepth);
+            }
+
+        }
+
+        public void MonoGameAddSprite(Texture2D texture, float x, float y, float dx, float dy, float w, float h, float sin, float cos, Color color, Vector2 texCoordTL, Vector2 texCoordBR, float depth)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            SetTexture(texture);
+
+            ref var sprite = ref _sprites[_spriteIndex++];
+
+            sprite.TL.Position.X = x + dx * cos - dy * sin;
+            sprite.TL.Position.Y = y + dx * sin + dy * cos;
+            sprite.TL.Color = color;
+            sprite.TL.TextureCoord.X = texCoordTL.X;
+            sprite.TL.TextureCoord.Y = texCoordTL.Y;
+
+            sprite.TR.Position.X = x + (dx + w) * cos - dy * sin;
+            sprite.TR.Position.Y = y + (dx + w) * sin + dy * cos;
+            sprite.TR.Color = color;
+            sprite.TR.TextureCoord.X = texCoordBR.X;
+            sprite.TR.TextureCoord.Y = texCoordTL.Y;
+
+            sprite.BL.Position.X = x + dx * cos - (dy + h) * sin;
+            sprite.BL.Position.Y = y + dx * sin + (dy + h) * cos;
+            sprite.BL.Color = color;
+            sprite.BL.TextureCoord.X = texCoordTL.X;
+            sprite.BL.TextureCoord.Y = texCoordBR.Y;
+
+            sprite.BR.Position.X = x + (dx + w) * cos - (dy + h) * sin;
+            sprite.BR.Position.Y = y + (dx + w) * sin + (dy + h) * cos;
+            sprite.BR.Color = color;
+            sprite.BR.TextureCoord.X = texCoordBR.X;
+            sprite.BR.TextureCoord.Y = texCoordBR.Y;
+
+            _primitiveCount += 2;
+
+            if (_spriteIndex == MAX_SPRITES)
+                CompleteBuffer();
+        }
+
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale) => AddSprite(texture, position, scale, Color.White, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color) => AddSprite(texture, position, scale, color, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             SetTexture(texture);
@@ -276,7 +398,8 @@ namespace Worm
         {
             if (_primitiveCount > 0)
             {
-                _renderCommands.RenderOp(_spriteIndex * 4 - _primitiveCount * 2, _primitiveCount);
+                var startIndex = _spriteIndex * 4 - _primitiveCount * 2;
+                _renderCommands.RenderOp(startIndex, _primitiveCount);
                 _primitiveCount = 0;
             }
         }
@@ -292,7 +415,7 @@ namespace Worm
                 UpdateNextVertexBuffer();
         }
 
-        public void Render(SpriteBatch batch)
+        public void Render()
         {
             Assert.EqualTo(_isInBulkOperation, false);
             UpdateProjection();
@@ -303,6 +426,8 @@ namespace Worm
 
         public void Reset()
         {
+            UpdateProjection();
+
             //TODO: renderCommand should support updating effect params (like WVP)
             _renderCommands.SetDepthState(_defaultDepth);
             _renderCommands.SetBlendState(_defaultBlend);
@@ -311,6 +436,9 @@ namespace Worm
             _renderCommands.SetTexture(_defaultTexture);
             _renderCommands.SetEffect(_defaultEffect);
             _renderCommands.SetIndexBuffer(_indexBuffer);
+            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.World, Matrix.Identity);
+            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.Projection, _projection);
+            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.View, Matrix.Identity);
             _currentTexture = _defaultTexture;
 
             ReturnUsedBufers();
