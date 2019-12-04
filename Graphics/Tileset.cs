@@ -4,16 +4,16 @@ namespace Worm.Graphics
     {
         private MTexture[,] tiles;
 
-        public Tileset(MTexture texture, int tileWidth, int tileHeight)
+        public Tileset(MTexture texture, int tilesX, int tilesY)
         {
             Texture = texture;
-            TileWidth = tileWidth;
-            TileHeight = TileHeight;
+            TileWidth = Texture.Width / tilesX;
+            TileHeight = texture.Height / tilesY;
 
-            tiles = new MTexture[Texture.Width / tileWidth, Texture.Height / tileHeight];
-            for (int x = 0; x < Texture.Width / tileWidth; x++)
-                for (int y = 0; y < Texture.Height / tileHeight; y++)
-                    tiles[x, y] = new MTexture(Texture, x * tileWidth, y * tileHeight, tileWidth, tileHeight);
+            tiles = new MTexture[Texture.Width / TileWidth, Texture.Height / TileHeight];
+            for (int x = 0; x < Texture.Width / TileWidth; x++)
+                for (int y = 0; y < Texture.Height / TileHeight; y++)
+                    tiles[x, y] = new MTexture(Texture, x * TileWidth, y * TileHeight, TileWidth, TileHeight);
         }
 
         public MTexture Texture

@@ -2,7 +2,7 @@
 {
     //https://mikemac2d.itch.io/adventure-tile-pack
     //https://sharpscript.net/lisp/unity
-
+    //https://0x72.itch.io/pixeldudesmaker
 
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
@@ -45,6 +45,7 @@
         private MTexture _test;
         private MTexture _test2;
         private MTexture _test3;
+        private MTexture _test4;
 
         public Engine()
         {
@@ -69,9 +70,10 @@
             // var atlasBuilder = new AtlasBuilder();
             // atlasBuilder.AddPath(@"P:\Games\Assets\Adventure_Pack_v3\Grass", "gtile*.png");
 
-            _test = MTexture.FromFile(@"E:\GitHub\Xposure\Games\Assets\Adventure_Pack_v3\Grass\gtile44.png");//  atlasBuilder.Build().Texture;
-            _test2 = MTexture.FromFile(@"E:\GitHub\Xposure\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_orange.png");//  atlasBuilder.Build().Texture;
-            _test3 = MTexture.FromFile(@"E:\GitHub\Xposure\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_blue.png");//  atlasBuilder.Build().Texture;
+            _test = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\gtile44.png");//  atlasBuilder.Build().Texture;
+            _test2 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_orange.png");//  atlasBuilder.Build().Texture;
+            _test3 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_blue.png");//  atlasBuilder.Build().Texture;
+            _test4 = MTexture.FromFile(@"p:\Games\Assets\a0a030404060403.png");
 
             _systems.Add(new ColorLerpSystem());
 
@@ -166,7 +168,7 @@
 
         private float cx = 0, cy = 0;
         private float cameraSpeed = 100;
-
+        private int ii = 0;
         protected override void Draw(GameTime gameTime)
         {
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -222,7 +224,7 @@
             if (keyboard.IsKeyDown(Keys.Up)) cy += cameraSpeed * dt;
             if (keyboard.IsKeyDown(Keys.Down)) cy -= cameraSpeed * dt;
 
-            _spriteBatch.SetSamplerState(SamplerState.AnisotropicWrap);
+            _spriteBatch.SetSamplerState(SamplerState.PointClamp);
             _spriteBatch.SetCamera(Matrix.CreateTranslation((int)cx, (int)cy, 0));
             var scale = 32;
             for (var y = 0; y < 128; y++)
@@ -259,6 +261,12 @@
                                 new Scale(s, s),
                                 new Color(cr, cg, cb, ca));
             }
+            var fps = 9;
+            ii = (ii + 1) % (4 * fps);
+            var mt = _test4.GetSubtexture((ii / fps * 16), 48, 16, 24);
+            _spriteBatch.SetSamplerState(SamplerState.PointClamp);
+            mt.DrawCentered(_spriteBatch, new Vector2(100, 100), Color.White, 4f);
+            //_spriteBatch.AddSprite(_test4.GetSubtexture((ii * 16)), new Position(0, 0), new Scale(100, 100), Color.White);
             _spriteBatch.Render();
 
             foreach (var it in _systems)
