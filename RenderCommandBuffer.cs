@@ -118,7 +118,7 @@ namespace Worm
         {
             var index = _blendStates.Count;
             _blendStates.Add(blendState);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Blend, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Blend, index));
         }
 
         private List<DepthStencilState> _depthStates = new List<DepthStencilState>();
@@ -126,7 +126,7 @@ namespace Worm
         {
             var index = _depthStates.Count;
             _depthStates.Add(depthState);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Depth, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Depth, index));
         }
 
         private List<RasterizerState> _rasterizerStates = new List<RasterizerState>();
@@ -134,7 +134,7 @@ namespace Worm
         {
             var index = _rasterizerStates.Count;
             _rasterizerStates.Add(rasitizerState);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Rasterizer, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Rasterizer, index));
         }
 
         private List<SamplerState> _samplerStates = new List<SamplerState>();
@@ -142,7 +142,7 @@ namespace Worm
         {
             var index = _samplerStates.Count;
             _samplerStates.Add(samplerState);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Sampler, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Sampler, index));
         }
 
         private List<Texture> _textures = new List<Texture>();
@@ -150,7 +150,7 @@ namespace Worm
         {
             var index = _textures.Count;
             _textures.Add(texture);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Texture, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Texture, index));
         }
 
         private List<Effect> _effects = new List<Effect>();
@@ -158,8 +158,7 @@ namespace Worm
         {
             var index = _effects.Count;
             _effects.Add(effect);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.Effect, index));
-
+            _buffer.Add(new GraphicsStateChange(CommandTypes.Effect, index));
         }
 
         private List<IndexBuffer> _indicies = new List<IndexBuffer>();
@@ -167,7 +166,7 @@ namespace Worm
         {
             var index = _indicies.Count;
             _indicies.Add(indicies);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.IndexBuffer, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.IndexBuffer, index));
         }
 
         private List<VertexBuffer> _vertices = new List<VertexBuffer>();
@@ -175,17 +174,17 @@ namespace Worm
         {
             var index = _vertices.Count;
             _vertices.Add(vertices);
-            GraphicsStateChange* cmd = _buffer.Add(new GraphicsStateChange(CommandTypes.VertexBuffer, index));
+            _buffer.Add(new GraphicsStateChange(CommandTypes.VertexBuffer, index));
         }
 
         public void SetCamera(CameraType cameraType, Matrix matrix)
         {
-            CameraOperation* cmd = _buffer.Add(new CameraOperation(cameraType, matrix));
+            _buffer.Add(new CameraOperation(cameraType, matrix));
         }
 
         public void RenderOp(int startIndex, int primitiveCount)
         {
-            RenderOperation* cmd = _buffer.Add(new RenderOperation(startIndex, primitiveCount));
+            _buffer.Add(new RenderOperation(startIndex, primitiveCount));
         }
 
 
