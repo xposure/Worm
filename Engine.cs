@@ -20,8 +20,8 @@
 
     public class Engine : Game
     {
-        private static Game _instance;
-        public static Game Instance => _instance;
+        private static Engine _instance;
+        public static Engine Instance => _instance;
 
 
         GraphicsDeviceManager graphics;
@@ -31,8 +31,10 @@
         private ILoggerFactory _logFactory;
         private ILogger _logger;
         private EntityManager _entities;
+        public EntityManager Entities => _entities;
 
         private IAllocator _memory;
+        public IAllocator Memory => _memory;
         private BetterSpriteBatch _spriteBatch;
 
         private AvgValue _updateAvg = new AvgValue(0.9f, 1f);
@@ -70,10 +72,10 @@
             // var atlasBuilder = new AtlasBuilder();
             // atlasBuilder.AddPath(@"P:\Games\Assets\Adventure_Pack_v3\Grass", "gtile*.png");
 
-            _test = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\gtile44.png");//  atlasBuilder.Build().Texture;
-            _test2 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_orange.png");//  atlasBuilder.Build().Texture;
-            _test3 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_blue.png");//  atlasBuilder.Build().Texture;
-            _test4 = MTexture.FromFile(@"p:\Games\Assets\a0a030404060403.png");
+            // _test = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\gtile44.png");//  atlasBuilder.Build().Texture;
+            // _test2 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_orange.png");//  atlasBuilder.Build().Texture;
+            // _test3 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_blue.png");//  atlasBuilder.Build().Texture;
+            _test4 = MTexture.FromFile(@"p:\Games\Worm\sprite.png");
 
             _systems.Add(new ColorLerpSystem());
 
@@ -226,41 +228,41 @@
 
             _spriteBatch.SetSamplerState(SamplerState.PointClamp);
             _spriteBatch.SetCamera(Matrix.CreateTranslation((int)cx, (int)cy, 0));
-            var scale = 32;
-            for (var y = 0; y < 128; y++)
-                for (var x = 0; x < 128; x++)
-                    _spriteBatch.AddSprite(_test.Texture, new Position(x * scale, y * scale), new Scale(scale, scale));
-            //_test.DrawCentered(_spriteBatch, new Vector2(100, 100));
-            //_spriteBatch.SetBlendState(BlendState.Additive);
-            var r = new Random(12345679);
-            for (var i = 0; i < 10; i++)
-            {
-                var x = r.Next(0, 128 * scale);
-                var y = r.Next(0, 128 * scale);
-                var s = r.Next(1500, 2500);
-                var ca = r.Next(64, 164);
-                var cr = r.Next(192, 255);
-                var cg = r.Next(192, 255);
-                var cb = r.Next(192, 255);
-                _spriteBatch.AddSprite(_test2.Texture,
-                                new Position(x - _test2.Texture.Width / 2, y - _test2.Texture.Height / 2),
-                                new Scale(s, s),
-                                new Color(cr, cg, cb, ca));
-            }
-            for (var i = 0; i < 10; i++)
-            {
-                var x = r.Next(0, 128 * scale);
-                var y = r.Next(0, 128 * scale);
-                var s = r.Next(500, 2000);
-                var ca = r.Next(128, 164);
-                var cr = r.Next(192, 255);
-                var cg = r.Next(192, 255);
-                var cb = r.Next(192, 255);
-                _spriteBatch.AddSprite(_test3.Texture,
-                                new Position(x - _test3.Texture.Width / 2, y - _test3.Texture.Height / 2),
-                                new Scale(s, s),
-                                new Color(cr, cg, cb, ca));
-            }
+            // var scale = 32;
+            // for (var y = 0; y < 128; y++)
+            //     for (var x = 0; x < 128; x++)
+            //         _spriteBatch.AddSprite(_test.Texture, new Position(x * scale, y * scale), new Scale(scale, scale));
+            // //_test.DrawCentered(_spriteBatch, new Vector2(100, 100));
+            // //_spriteBatch.SetBlendState(BlendState.Additive);
+            // var r = new Random(12345679);
+            // for (var i = 0; i < 10; i++)
+            // {
+            //     var x = r.Next(0, 128 * scale);
+            //     var y = r.Next(0, 128 * scale);
+            //     var s = r.Next(1500, 2500);
+            //     var ca = r.Next(64, 164);
+            //     var cr = r.Next(192, 255);
+            //     var cg = r.Next(192, 255);
+            //     var cb = r.Next(192, 255);
+            //     _spriteBatch.AddSprite(_test2.Texture,
+            //                     new Position(x - _test2.Texture.Width / 2, y - _test2.Texture.Height / 2),
+            //                     new Scale(s, s),
+            //                     new Color(cr, cg, cb, ca));
+            // }
+            // for (var i = 0; i < 10; i++)
+            // {
+            //     var x = r.Next(0, 128 * scale);
+            //     var y = r.Next(0, 128 * scale);
+            //     var s = r.Next(500, 2000);
+            //     var ca = r.Next(128, 164);
+            //     var cr = r.Next(192, 255);
+            //     var cg = r.Next(192, 255);
+            //     var cb = r.Next(192, 255);
+            //     _spriteBatch.AddSprite(_test3.Texture,
+            //                     new Position(x - _test3.Texture.Width / 2, y - _test3.Texture.Height / 2),
+            //                     new Scale(s, s),
+            //                     new Color(cr, cg, cb, ca));
+            // }
             var fps = 9;
             ii = (ii + 1) % (4 * fps);
             var mt = _test4.GetSubtexture((ii / fps * 16), 48, 16, 24);
