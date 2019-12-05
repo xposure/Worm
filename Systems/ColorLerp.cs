@@ -2,6 +2,7 @@ using System;
 using Atma;
 using Atma.Entities;
 using Microsoft.Xna.Framework;
+using Worm;
 
 public struct ColorLerp
 {
@@ -15,15 +16,15 @@ public class ColorLerpSystem : ISystem
     {
     }
 
-    public void Update(float dt, EntityManager entityManager)
+    public void Update(float dt)
     {
-        entityManager.ForEntity((uint entities, ref Color color, ref ColorLerp colorLerp) =>
+        Engine.Instance.Entities.ForEntity((uint entities, ref Color color, ref ColorLerp colorLerp) =>
         {
             color = Color.Lerp(color, colorLerp.Target, colorLerp.Speed);
         });
     }
 
-    public void Draw(float dt, EntityManager entityManager)
+    public void Draw(float dt)
     {
     }
 

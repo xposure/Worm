@@ -163,7 +163,7 @@
             _updateAvg += updateTimer0;
 
             foreach (var it in _systems)
-                it.Update(dt, _entities);
+                it.Update(dt);
 
             base.Update(gameTime);
         }
@@ -272,7 +272,7 @@
             _spriteBatch.Render();
 
             foreach (var it in _systems)
-                it.Draw(dt, _entities);
+                it.Draw(dt);
 
             renderTimer.Stop();
             _renderAvg += renderTimer;
