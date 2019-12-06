@@ -42,6 +42,32 @@ namespace Worm.Systems
             foreach (var renderGroup in _renderOrder)
             {
                 _spriteBatch.Reset();
+                //var renderLayer = renderGroup.Specification.GetGroupData<RenderLayer>();
+                var grpSprites = _spriteBatch.TakeSprites(renderGroup.EntityCount);
+                var spriteIndex = 0;
+
+                var spriteComponentIndex = renderGroup.Specification.GetComponentIndex(ComponentType<Sprite>.Type);
+                var positionComponentIndex = renderGroup.Specification.GetComponentIndex(ComponentType<Position>.Type);
+
+                for (var k = 0; k < renderGroup.AllChunks.Count; k++)
+                {
+                    var chunk = renderGroup[k];
+                    if (chunk.Count > 0)
+                    {
+                        var sprites = chunk.GetComponentData<Sprite>(spriteComponentIndex);
+                        var positions = chunk.GetComponentData<Position>(positionComponentIndex);
+
+                        for (var i = 0; i < chunk.Count; i++)
+                        {
+                            ref var position = ref positions[i];
+                            ref var sprite = ref sprites[i];
+                            ref var gpuSprite = ref grpSprites.Sprites[spriteIndex++];
+
+
+                        }
+                    }
+                }
+
                 //TODO: add the ability to sort entities? this could move a lot of data, its better to copy only data needed and sort that
 
                 //renderGroup.
