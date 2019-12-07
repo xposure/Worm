@@ -79,7 +79,7 @@
             var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
 
             _systems.Add(new ColorLerpSystem());
-            //_systems.Add(new AnimationSystem());
+            _systems.Add(new AnimationSystem());
             _systems.Add(new RenderingSystem());
 
             _memory = new HeapAllocator(_logFactory);
@@ -108,7 +108,6 @@
             }
 
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
 
             foreach (var it in _systems)
                 it.Init();

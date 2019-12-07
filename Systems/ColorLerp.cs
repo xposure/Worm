@@ -10,7 +10,7 @@ public struct ColorLerp
     public float Speed;
 }
 
-public class ColorLerpSystem : ISystem
+public class ColorLerpSystem : UnmanagedDispose, ISystem
 {
     public void Init()
     {

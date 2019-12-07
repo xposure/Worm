@@ -10,7 +10,7 @@ namespace Worm.Systems
     using Microsoft.Xna.Framework.Graphics;
     using Worm.Graphics;
 
-    public class RenderingSystem : ISystem
+    public class RenderingSystem : UnmanagedDispose, ISystem
     {
         private BetterSpriteBatch _spriteBatch;
         //private IAllocator _allocator;
@@ -162,5 +162,11 @@ namespace Worm.Systems
                 _spriteBatch.Render();
             }
         }
+        protected override void OnUnmanagedDispose()
+        {
+            _spriteBatch.Dispose();
+            _renderOrder.Clear();
+        }
+
     }
 }
