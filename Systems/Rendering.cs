@@ -9,6 +9,7 @@ namespace Worm.Systems
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
     using Worm.Graphics;
+    using Worm.Managers;
 
     public class RenderingSystem : UnmanagedDispose, ISystem
     {
@@ -102,7 +103,23 @@ namespace Worm.Systems
                             size.Width *= scale.Width;
                             size.Height *= scale.Height;
 
-                            _spriteBatch.AddSprite(position, size, color, region);
+                            var p = new Position(position.X, position.Y);
+                            p.X += sprite.OriginX * size.Width;
+                            p.Y += sprite.OriginY * size.Height;
+
+                            if (sprite.FlipX)
+                            {
+                                p.X += size.Width;
+                                size.Width = -size.Width;
+                            }
+
+                            if (sprite.FlipY)
+                            {
+                                p.Y += size.Height;
+                                size.Height = -size.Height;
+                            }
+
+                            _spriteBatch.AddSprite(p, size, color, region);
 
                             // //positions
                             // if (scaleComponentIndex > -1)

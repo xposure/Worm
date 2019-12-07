@@ -1,4 +1,4 @@
-namespace Worm.Graphics
+namespace Worm.Managers
 {
     using System.Collections.Generic;
     using Atma;
@@ -7,8 +7,7 @@ namespace Worm.Graphics
     using System;
     using System.Diagnostics.CodeAnalysis;
     using Atma.Memory;
-
-
+    using System.IO;
 
     public class SpriteTexture : UnmanagedDispose, IEquatable<SpriteTexture>
     {
@@ -58,6 +57,8 @@ namespace Worm.Graphics
     {
         public static SpriteTexture Missing, Circle, Square;
 
+        public static SpriteTexture Player;
+
         private static uint _textureId = 0;
 
         private static Dictionary<uint, SpriteTexture> _textures = new Dictionary<uint, SpriteTexture>();
@@ -75,6 +76,7 @@ namespace Worm.Graphics
             Missing = InitMissingTexture();
             Circle = InitCircleTexture();
             Square = InitSquareTexture();
+            Player = AddTexture(@"p:\Games\Worm\sprite.png");
         }
 
         public static void Dispose()
@@ -83,6 +85,12 @@ namespace Worm.Graphics
                 texture.Dispose();
 
             _textures.Clear();
+        }
+
+        public static SpriteTexture AddTexture(string file)
+        {
+            using (var fs = File.OpenRead(file))
+                return AddTexture(Texture2D.FromStream(Engine.Instance.GraphicsDevice, fs));
         }
 
         public static SpriteTexture AddTexture(Texture2D texture)

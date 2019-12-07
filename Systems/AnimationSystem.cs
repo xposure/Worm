@@ -2,6 +2,7 @@ namespace Worm.Systems
 {
     using Atma;
     using Worm.Graphics;
+    using Worm.Managers;
 
     public class AnimationSystem : UnmanagedDispose, ISystem
     {

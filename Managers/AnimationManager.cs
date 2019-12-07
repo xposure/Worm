@@ -1,4 +1,4 @@
-namespace Worm.Graphics
+namespace Worm.Managers
 {
     using System.Collections.Generic;
     using Atma;
@@ -8,6 +8,7 @@ namespace Worm.Graphics
     using System.Diagnostics.CodeAnalysis;
     using Atma.Memory;
     using HashCode = Atma.HashCode;
+    using System.Linq;
 
     public readonly struct SpriteKeyFrame : IEquatable<SpriteKeyFrame>
     {
@@ -102,12 +103,14 @@ namespace Worm.Graphics
     {
         private static uint _animationId = 0;
         public static Animation None;
+        public static Animation Player;
 
         private static Dictionary<uint, Animation> _animations = new Dictionary<uint, Animation>();
 
         public static void Init()
         {
             None = AddAnimation(new SpriteKeyFrame(0, 0, 1, 1));
+            Player = Animations.CreateAnimation(Sprites.Player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
         }
 
         public static Animation AddAnimation(params SpriteKeyFrame[] frames)

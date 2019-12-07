@@ -9,6 +9,11 @@ public struct Sprite
     //public float UVX0, UVY0, UVX1, UVY1;
 
     //public Color Color;
+    //public float Rotation;
+    public float OriginX;
+    public float OriginY;
+
+    public bool FlipX, FlipY;
 
     public Sprite(uint textureId, int width, int height)
     {
@@ -16,6 +21,11 @@ public struct Sprite
         //Color = color;
         Width = width;
         Height = height;
+        //Rotation = 0;
+        OriginX = 0.5f;
+        OriginY = 0.5f;
+        FlipX = false;
+        FlipY = false;
         // UVX0 = 0;
         // UVY0 = 0;
         // UVX1 = 1;
