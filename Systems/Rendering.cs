@@ -7,11 +7,13 @@ namespace Worm.Systems
     using Atma.Entities;
     using Atma.Memory;
     using Microsoft.Xna.Framework;
+    using Microsoft.Xna.Framework.Graphics;
+    using Worm.Graphics;
 
     public class RenderingSystem : ISystem
     {
         private BetterSpriteBatch _spriteBatch;
-        private IAllocator _allocator;
+        //private IAllocator _allocator;
         private EntitySpec _renderSpec;
 
         private List<EntityChunkList> _renderOrder = new List<EntityChunkList>();
@@ -38,46 +40,127 @@ namespace Worm.Systems
             _renderOrder.AddRange(em.EntityArrays.Filter(_renderSpec));
             _renderOrder.Sort(_renderSort);
 
+            var defaultScale = new Scale(1, 1);
+            var defaultColor = Color.White;
+            var defaultRegion = new TextureRegion(0, 0, 1, 1);
 
             foreach (var renderGroup in _renderOrder)
             {
                 _spriteBatch.Reset();
-                //var renderLayer = renderGroup.Specification.GetGroupData<RenderLayer>();
-                var grpSprites = _spriteBatch.TakeSprites(renderGroup.EntityCount);
-                var spriteIndex = 0;
+                _spriteBatch.SetSamplerState(SamplerState.PointClamp);
 
-                var spriteComponentIndex = renderGroup.Specification.GetComponentIndex(ComponentType<Sprite>.Type);
-                var positionComponentIndex = renderGroup.Specification.GetComponentIndex(ComponentType<Position>.Type);
+                var currentTexture = Sprites.Missing;
+                _spriteBatch.SetTexture(Sprites.Missing);
+
+                var texelWidth = _spriteBatch.TexelWidth;
+                var texelHeight = _spriteBatch.TexelHeight;
+                var textureWidth = currentTexture.GpuTexture.Width;
+                var textureHeight = currentTexture.GpuTexture.Height;
+
+                //var renderLayer = renderGroup.Specification.GetGroupData<RenderLayer>();
+
+                var spriteComponentIndex = renderGroup.Specification.GetComponentIndex<Sprite>();
+                var positionComponentIndex = renderGroup.Specification.GetComponentIndex<Position>();
+                var scaleComponentIndex = renderGroup.Specification.GetComponentIndex<Scale>();
+                var colorComponentIndex = renderGroup.Specification.GetComponentIndex<Color>();
+                var regionComponentIndex = renderGroup.Specification.GetComponentIndex<TextureRegion>();
 
                 for (var k = 0; k < renderGroup.AllChunks.Count; k++)
                 {
+                    //using var grpSprites = _spriteBatch.TakeSprites(renderGroup.EntityCount);
                     var chunk = renderGroup[k];
                     if (chunk.Count > 0)
                     {
                         var sprites = chunk.GetComponentData<Sprite>(spriteComponentIndex);
                         var positions = chunk.GetComponentData<Position>(positionComponentIndex);
+                        var scales = scaleComponentIndex > -1 ? chunk.GetComponentData<Scale>(scaleComponentIndex) : stackalloc[] { defaultScale };
+                        var colors = colorComponentIndex > -1 ? chunk.GetComponentData<Color>(colorComponentIndex) : stackalloc[] { defaultColor };
+                        var regions = regionComponentIndex > -1 ? chunk.GetComponentData<TextureRegion>(regionComponentIndex) : stackalloc[] { defaultRegion };
 
+                        //var colors = 
+                        //TODO: is it going to be faster to lookup for texture count and take sprites or to just call add sprite and let it do it?
                         for (var i = 0; i < chunk.Count; i++)
                         {
-                            ref var position = ref positions[i];
+                            //ref var gpuSprite = ref grpSprites.Sprites[i];
                             ref var sprite = ref sprites[i];
-                            ref var gpuSprite = ref grpSprites.Sprites[spriteIndex++];
+                            ref var position = ref positions[i];
+                            ref var scale = ref scales[scaleComponentIndex > -1 ? i : 0];
+                            ref var color = ref colors[colorComponentIndex > -1 ? i : 0];
+                            ref var region = ref regions[regionComponentIndex > -1 ? i : 0];
+
+                            if (currentTexture != sprite.TextureID)
+                            {
+                                _spriteBatch.SetTexture(Sprites.GetTexture(sprite.TextureID));
+                                texelWidth = _spriteBatch.TexelWidth;
+                                texelHeight = _spriteBatch.TexelHeight;
+                                textureWidth = currentTexture.GpuTexture.Width;
+                                textureHeight = currentTexture.GpuTexture.Height;
+                            }
+
+                            //TODO: rotation
+                            var size = new Scale(sprite.Width, sprite.Height);
+                            size.Width *= scale.Width;
+                            size.Height *= scale.Height;
+
+                            _spriteBatch.AddSprite(position, size, color, region);
+
+                            // //positions
+                            // if (scaleComponentIndex > -1)
+                            // {
+                            //     ref var scale = ref scales[i];
+
+                            //     gpuSprite.TL.Position.X = position.X;
+                            //     gpuSprite.TL.Position.Y = position.Y;
+
+                            //     gpuSprite.TR.Position.X = position.X + sprite.Width * scale.Width;
+                            //     gpuSprite.TR.Position.Y = position.Y;
+
+                            //     gpuSprite.BR.Position.X = position.X + sprite.Width * scale.Width;
+                            //     gpuSprite.BR.Position.Y = position.Y + sprite.Height * scale.Height;
+
+                            //     gpuSprite.BL.Position.X = position.X;
+                            //     gpuSprite.BL.Position.Y = position.Y + sprite.Height * scale.Height;
+                            // }
+                            // else
+                            // {
+                            //     gpuSprite.TL.Position.X = position.X;
+                            //     gpuSprite.TL.Position.Y = position.Y;
+
+                            //     gpuSprite.TR.Position.X = position.X + sprite.Width;
+                            //     gpuSprite.TR.Position.Y = position.Y;
+
+                            //     gpuSprite.BR.Position.X = position.X + sprite.Width;
+                            //     gpuSprite.BR.Position.Y = position.Y + sprite.Height;
+
+                            //     gpuSprite.BL.Position.X = position.X;
+                            //     gpuSprite.BL.Position.Y = position.Y + sprite.Height;
+                            // }
+
+                            // //color
+                            // gpuSprite.TL.Color = sprite.Color;
+                            // gpuSprite.TR.Color = sprite.Color;
+                            // gpuSprite.BR.Color = sprite.Color;
+                            // gpuSprite.BL.Color = sprite.Color;
 
 
+                            // //texture coords
+                            // gpuSprite.TL.TextureCoord.X = sprite.UVX0;
+                            // gpuSprite.TL.TextureCoord.Y = sprite.UVY0;
+
+                            // gpuSprite.TR.TextureCoord.X = sprite.UVX1;
+                            // gpuSprite.TR.TextureCoord.Y = sprite.UVY0;
+
+                            // gpuSprite.BR.TextureCoord.X = sprite.UVX1;
+                            // gpuSprite.BR.TextureCoord.Y = sprite.UVY1;
+
+                            // gpuSprite.BL.TextureCoord.X = sprite.UVX0;
+                            // gpuSprite.BL.TextureCoord.Y = sprite.UVY1;
                         }
                     }
                 }
 
-                //TODO: add the ability to sort entities? this could move a lot of data, its better to copy only data needed and sort that
-
-                //renderGroup.
-
+                _spriteBatch.Render();
             }
-
-            // em.ForChunk((int length, ReadOnlySpan<EntityRef> entities, Span<Position> positions, Span<Color> colors) =>
-            // {
-
-            // });
         }
     }
 }

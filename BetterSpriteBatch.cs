@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Atma;
 using Atma.Common;
@@ -26,20 +27,22 @@ namespace Worm
 
 
     [StructLayout(LayoutKind.Sequential, Pack = 0)]
-    public struct Sprite
+    public struct GpuSprite
     {
         public SpriteVertex TL;
         public SpriteVertex TR;
         public SpriteVertex BL;
         public SpriteVertex BR;
+
+        //public void Update(in Vector2 position, in Vector2 scale, )
     }
 
     public readonly ref struct BulkSrpiteOperation
     {
         private readonly BetterSpriteBatch _batch;
-        public readonly Span<Sprite> Sprites;
+        public readonly Span<GpuSprite> Sprites;
 
-        public BulkSrpiteOperation(BetterSpriteBatch batch, Span<Sprite> sprites)
+        public BulkSrpiteOperation(BetterSpriteBatch batch, Span<GpuSprite> sprites)
         {
             _batch = batch;
             Sprites = sprites;
@@ -95,7 +98,7 @@ namespace Worm
 
         private int _primitiveCount = 0;
         //private int _vertexPosition = 0;
-        private Sprite[] _sprites;
+        private GpuSprite[] _sprites;
         private int _spriteIndex = 0;
         private DynamicVertexBuffer _vertexBuffer;
         private ObjectPool<DynamicVertexBuffer> _bufferPool;
@@ -118,7 +121,7 @@ namespace Worm
                 _allBuffers.Add(buffer);
                 return buffer;
             });
-            _sprites = new Sprite[MAX_SPRITES];
+            _sprites = new GpuSprite[MAX_SPRITES];
             _renderCommands = new RenderCommandBuffer(allocator);
             _device = device;
 
@@ -172,6 +175,9 @@ namespace Worm
 
             }
         }
+
+        public float TexelWidth => 1f / _currentTexture.Width;
+        public float TexelHeight => 1f / _currentTexture.Height;
 
         public void SetTexture(Texture2D texture)
         {
@@ -333,13 +339,9 @@ namespace Worm
                 CompleteBuffer();
         }
 
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale) => AddSprite(texture, position, scale, Color.White, new TextureRegion(0, 0, 1, 1));
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color) => AddSprite(texture, position, scale, color, new TextureRegion(0, 0, 1, 1));
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddSprite(in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
         {
-            Assert.EqualTo(_isInBulkOperation, false);
-            SetTexture(texture);
-
             ref var sprite = ref _sprites[_spriteIndex++];
 
             sprite.TL.Position = position;
@@ -369,6 +371,15 @@ namespace Worm
 
             if (_spriteIndex == MAX_SPRITES)
                 CompleteBuffer();
+        }
+
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale) => AddSprite(texture, position, scale, Color.White, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color) => AddSprite(texture, position, scale, color, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
+        {
+            Assert.EqualTo(_isInBulkOperation, false);
+            SetTexture(texture);
+            AddSprite(position, scale, color, texCoord);
         }
 
         public BulkSrpiteOperation TakeSprites(int requestCount)

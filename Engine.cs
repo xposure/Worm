@@ -17,6 +17,8 @@
     using Microsoft.Extensions.Logging;
     using System.Collections.Generic;
     using Worm.Graphics;
+    using Worm.Systems;
+    using System.Linq;
 
     public class Engine : Game
     {
@@ -26,7 +28,6 @@
 
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        Texture2D _white;
 
         private ILoggerFactory _logFactory;
         private ILogger _logger;
@@ -40,13 +41,8 @@
         private AvgValue _updateAvg = new AvgValue(0.9f, 1f);
         private AvgValue _renderAvg = new AvgValue(0.9f, 1f);
 
-        private Texture2D _circle;
-
         private List<ISystem> _systems = new List<ISystem>();
 
-        private MTexture _test;
-        private MTexture _test2;
-        private MTexture _test3;
         private MTexture _test4;
 
         public Engine()
@@ -66,9 +62,8 @@
             _logger = _logFactory.CreateLogger<Engine>();
         }
 
-        protected override void Initialize()
+        protected override void LoadContent()
         {
-            base.Initialize();
             // var atlasBuilder = new AtlasBuilder();
             // atlasBuilder.AddPath(@"P:\Games\Assets\Adventure_Pack_v3\Grass", "gtile*.png");
 
@@ -77,7 +72,15 @@
             // _test3 = MTexture.FromFile(@"p:\Games\Assets\Adventure_Pack_v3\Grass\grass_blur_blue.png");//  atlasBuilder.Build().Texture;
             _test4 = MTexture.FromFile(@"p:\Games\Worm\sprite.png");
 
+            Sprites.Init();
+            Animations.Init();
+
+            var player = Sprites.AddTexture(_test4.Texture);
+            var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
+
             _systems.Add(new ColorLerpSystem());
+            //_systems.Add(new AnimationSystem());
+            _systems.Add(new RenderingSystem());
 
             _memory = new HeapAllocator(_logFactory);
             _entities = new EntityManager(_logFactory, _memory);
@@ -88,51 +91,24 @@
 
 
             var r = new Random();
-            var spec = EntitySpec.Create<Position, Velocity, Color, Scale>();
-            for (var i = 0; i < 0; i++)
+            var spec = EntitySpec.Create<Position, Velocity, Sprite, Scale, SpriteAnimation, Color, TextureRegion>();
+            for (var i = 0; i < 10; i++)
             {
                 //TODO: bulk insert API
                 var entity = _entities.Create(spec);
                 _entities.Replace(entity, new Position(r.Next(10, maxx - 10), r.Next(10, maxy - 10)));
-                var scale = r.Next(5, 25);
+                _entities.Replace(entity, new Sprite(player, 16, 24));
+                var scale = r.Next(1, 3);
                 _entities.Replace(entity, new Scale(scale, scale));
+                _entities.Replace(entity, new SpriteAnimation(playerAnimation.AnimationID, enabled: true));
+                _entities.Replace(entity, playerAnimation.Frames[0].Region);
+                _entities.Replace(entity, Color.White);
                 //_entities.Replace(entity, new Velocity(r.Next(-5000, 5000), r.Next(-5000, 5000)));
                 //_entities.Replace(entity, new Color(r.Next(255), r.Next(255), r.Next(255), 255));
             }
 
-
-        }
-
-        protected override void LoadContent()
-        {
-            _white = new Texture2D(GraphicsDevice, 1, 1);
-            _white.SetData(new[] { Color.White });
-
-            var r = 8;
-            var rsq = r * r;
-            _circle = new Texture2D(GraphicsDevice, r * 2, r * 2);
-            var circleData = new Color[_circle.Width * _circle.Height];
-            for (var y = 0; y < _circle.Height; y++)
-            {
-                for (var x = 0; x < _circle.Width; x++)
-                {
-                    var xr = x - r;
-                    var yr = y - r;
-
-                    var psq = xr * xr + yr * yr;
-
-                    var idx = _circle.Width * y + x;
-                    circleData[idx] = Color.White;
-                    var d = 1f - Math.Clamp((float)psq / rsq, 0, 1);
-                    var p = (byte)(d * 255);
-
-                    //circleData[idx] = p
-                    circleData[idx] = new Color(p, p, p, (byte)64);
-                }
-            }
-            _circle.SetData(circleData);
-
             spriteBatch = new SpriteBatch(GraphicsDevice);
+
 
             foreach (var it in _systems)
                 it.Init();
@@ -285,6 +261,8 @@
         protected override void UnloadContent()
         {
             _entities.Dispose();
+            Animations.Dispose();
+            Sprites.Dispose();
             _memory.Dispose();
         }
     }
