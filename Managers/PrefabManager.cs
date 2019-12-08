@@ -72,7 +72,23 @@ namespace Worm.Managers
 
         public static void Init()
         {
-            Player = AddPrefab<PlayerPrefab>(EntitySpec.Create<Position, Velocity, Sprite, Scale, SpriteAnimation, Color, TextureRegion, PlayerInput>());
+            Player = InitPlayer();
+        }
+
+        private unsafe static Prefab InitPlayer()
+        {
+            Span<ComponentType> componentTypes = stackalloc[] {
+                ComponentType<Position>.Type,
+                ComponentType<Velocity>.Type,
+                ComponentType<Sprite>.Type,
+                ComponentType<Scale>.Type,
+                ComponentType<SpriteAnimation>.Type,
+                ComponentType<Color>.Type,
+                ComponentType<TextureRegion>.Type,
+                ComponentType<PlayerInput>.Type,
+                ComponentType<PlayerUnitSelect>.Type,
+            };
+            return AddPrefab<PlayerPrefab>(new EntitySpec(componentTypes));
         }
 
         public static Prefab AddPrefab<T>(EntitySpec spec)

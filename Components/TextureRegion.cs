@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using Atma;
+using Microsoft.Xna.Framework.Graphics;
 
 [StructLayout(LayoutKind.Sequential, Pack = 0)]
 public struct TextureRegion
@@ -16,4 +18,21 @@ public struct TextureRegion
         X1 = x1;
         Y1 = y1;
     }
+
+    public static TextureRegion FromTexture(Texture2D texture, int tileWidth, int tileHeight, int tileX, int tileY)
+    {
+        var tilesX = texture.Width / tileWidth;
+        var tilesY = texture.Height / tileHeight;
+
+        Assert.EqualTo(tilesX * tileWidth, texture.Width);
+        Assert.EqualTo(tilesY * tileHeight, texture.Height);
+
+        var tileW = 1f / tilesX;
+        var tileH = 1f / tilesY;
+
+        return FromSize(tileX * tileW, tileY * tileW, tileW, tileH);
+    }
+
+    public static TextureRegion FromSize(float uvx, float uvy, float width, float height) => new TextureRegion(uvx, uvy, uvx + width, uvy + height);
+
 }

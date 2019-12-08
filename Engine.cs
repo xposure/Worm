@@ -20,9 +20,12 @@
     using Worm.Systems;
     using System.Linq;
     using Worm.Managers;
+    using System.IO;
 
     public class Engine : Game
     {
+        public const int TILE_SIZE = 32;
+
         private static Engine _instance;
         public static Engine Instance => _instance;
 
@@ -67,48 +70,80 @@
             Animations.Init();
             Prefabs.Init();
 
-            var player = Sprites.AddTexture(@"p:\Games\Worm\sprite.png");
-            var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
+            // var player = Sprites.AddTexture(@"p:\Games\Worm\sprite.png");
+            // var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
 
             _systems.Add(new ColorLerpSystem());
             _systems.Add(new UnitSpawnerSystem());
+            _systems.Add(new CameraTrackSystem());
             _systems.Add(new PlayerInputSystem());
+            _systems.Add(new PlayerUnitSelectSystem());
+            _systems.Add(new ColliderSystem());
             _systems.Add(new AnimationSystem());
             _systems.Add(new RenderingSystem());
 
             _memory = new HeapAllocator(_logFactory);
             _entities = new EntityManager(_logFactory, _memory);
 
-            var unitSpawnerSpec = EntitySpec.Create<Position>(new UnitSpawner() { Prefab = Prefabs.Player });
-            var p0 = Entities.Create(unitSpawnerSpec);
-            Entities.Replace(p0, new Position(100, 100));
+            // var unitSpawnerSpec = EntitySpec.Create<Position>(new UnitSpawner() { Prefab = Prefabs.Player });
+            // var p0 = Entities.Create(unitSpawnerSpec);
+            // Entities.Replace(p0, new Position(100, 100));
 
-            var p1 = Entities.Create(unitSpawnerSpec);
-            Entities.Replace(p1, new Position(200, 100));
+            // var p1 = Entities.Create(unitSpawnerSpec);
+            // Entities.Replace(p1, new Position(200, 100));
 
-            var p2 = Entities.Create(unitSpawnerSpec);
-            Entities.Replace(p2, new Position(200, 200));
+            // var p2 = Entities.Create(unitSpawnerSpec);
+            // Entities.Replace(p2, new Position(200, 200));
 
-
-            // var spec = new EntitySpec(componentTypes);
-            // for (var i = 0; i < 3; i++)
-            // {
-            //     //TODO: bulk insert API
-            //     var entity = _entities.Create(spec);
-            //     _entities.Replace(entity, new Position(r.Next(10, maxx - 10), r.Next(10, maxy - 10)));
-            //     _entities.Replace(entity, new Sprite(player, 16, 24) { FlipX = (i % 2) == 0, FlipY = (i % 3) == 0 });
-            //     var scale = r.Next(1, 3);
-            //     _entities.Replace(entity, new Scale(scale, scale));
-            //     _entities.Replace(entity, new SpriteAnimation(playerAnimation.AnimationID, fps: 1f / 10, enabled: true));
-            //     _entities.Replace(entity, playerAnimation.Frames[0].Region);
-            //     _entities.Replace(entity, Color.White);
-
-            //     //_entities.Replace(entity, new Velocity(r.Next(-5000, 5000), r.Next(-5000, 5000)));
-            //     //_entities.Replace(entity, new Color(r.Next(255), r.Next(255), r.Next(255), 255));
-            // }
+            CreateWalls();
+            var player = CreatePlayer();
+            CreateCamera(player);
 
             foreach (var it in _systems)
                 it.Init();
+        }
+
+        private void CreateWalls()
+        {
+            using (var sr = File.OpenText(@"P:\Games\Worm\room.data"))
+            {
+                var wallSpec = EntitySpec.Create<Position, Sprite, Tile>();
+                string line = null;
+                var y = 0;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    for (var x = 0; x < line.Length; x++)
+                    {
+                        if (line[x] == '1')
+                        {
+                            var wall = _entities.Create(wallSpec);
+                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE));
+                            _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
+                        }
+                    }
+                    y++;
+                }
+            }
+        }
+
+        private uint CreatePlayer()
+        {
+            var playerSpec = EntitySpec.Create<Position, Sprite, PlayerInput, TextureRegion, Collider, Move, Gravity, Input>();
+            var player = _entities.Create(playerSpec);
+            _entities.Replace(player, new PlayerInput() { Speed = 100 });
+            _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
+            _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginY = 1f });
+            _entities.Replace(player, new Collider() { Type = ColliderType.Player });
+            _entities.Replace(player, TextureRegion.FromTexture(Sprites.Player, 16, 24, 0, 2));
+            _entities.Replace(player, Gravity.Default);
+            return player;
+        }
+
+        private void CreateCamera(uint target)
+        {
+            var cameraSpec = EntitySpec.Create<Camera, Position>();
+            var camera = _entities.Create(cameraSpec);
+            _entities.Replace(camera, new Camera() { EntityTrack = target, TrackSpeed = 10f });
         }
 
         protected override void Update(GameTime gameTime)
