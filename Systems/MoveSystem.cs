@@ -1,7 +1,7 @@
 namespace Worm.Systems
 {
     //https://mattmakesgames.tumblr.com/post/127890619821/towerfall-physics
-    public class InputSystem : ISystem
+    public class MoveSystem : ISystem
     {
         public void Dispose()
         {
