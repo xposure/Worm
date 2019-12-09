@@ -1,7 +1,7 @@
 namespace Worm.Systems
 {
     //https://mattmakesgames.tumblr.com/post/127890619821/towerfall-physics
-    public class InputSystem : ISystem
+    public class MoveSystem : ISystem
     {
         public void Dispose()
         {
@@ -20,10 +20,10 @@ namespace Worm.Systems
             var em = Engine.Instance.Entities;
             em.ForEntity((uint entity, ref Input input, ref Position position) =>
             {
-                em.ForEntity((uint solid, ref Tile tile, ) =>
-                {
+                // em.ForEntity((uint solid, ref Solid tile,  ) =>
+                // {
 
-                });
+                // });
             });
         }
     }
