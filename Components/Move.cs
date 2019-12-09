@@ -1,5 +1,8 @@
+using Atma.Math;
+
 public struct Move
 {
-    public float SpeedX;
-    public float SpeedY;
+    public float2 Speed;
+
+    public float2 Remainder;
 }

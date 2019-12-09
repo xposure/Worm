@@ -21,6 +21,7 @@
     using System.Linq;
     using Worm.Managers;
     using System.IO;
+    using Atma.Math;
 
     public class Engine : Game
     {
@@ -77,6 +78,7 @@
             _systems.Add(new UnitSpawnerSystem());
             _systems.Add(new CameraTrackSystem());
             _systems.Add(new PlayerInputSystem());
+            _systems.Add(new MoveSystem());
             _systems.Add(new PlayerUnitSelectSystem());
             _systems.Add(new ColliderSystem());
             _systems.Add(new AnimationSystem());
@@ -107,7 +109,7 @@
         {
             using (var sr = File.OpenText(@"P:\Games\Worm\room.data"))
             {
-                var wallSpec = EntitySpec.Create<Position, Sprite, Tile>();
+                var wallSpec = EntitySpec.Create<Position, Sprite, Solid>();
                 string line = null;
                 var y = 0;
                 while ((line = sr.ReadLine()) != null)
@@ -119,6 +121,7 @@
                             var wall = _entities.Create(wallSpec);
                             _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE));
                             _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
+                            _entities.Replace(wall, new Solid() { Area = AxisAlignedBox2.FromDimensions(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
                         }
                     }
                     y++;
@@ -133,7 +136,7 @@
             _entities.Replace(player, new PlayerInput() { Speed = 100 });
             _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
             _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginY = 1f });
-            _entities.Replace(player, new Collider() { Type = ColliderType.Player });
+            _entities.Replace(player, new Collider() { Type = ColliderType.Player, Area = AxisAlignedBox2.FromDimensions(float2.Zero, new float2(32, 48)) });
             _entities.Replace(player, TextureRegion.FromTexture(Sprites.Player, 16, 24, 0, 2));
             _entities.Replace(player, Gravity.Default);
             return player;
