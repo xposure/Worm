@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Atma\Atma.Framework\src\Atma.Entities\source\Atma.Entities.csproj" />
     <ProjectReference Include="..\..\Atma\Atma.Framework\src\Atma.Memory\source\Atma.Memory.csproj" />
     <ProjectReference Include="..\..\Atma\Atma.Framework\src\Atma.Common\source\Atma.Common.csproj" />
+    <ProjectReference Include="..\..\atma\Atma.Math\source\Atma.Math.csproj" />
   </ItemGroup>
 
 </Project>

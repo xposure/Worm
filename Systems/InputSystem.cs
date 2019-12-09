@@ -20,10 +20,10 @@ namespace Worm.Systems
             var em = Engine.Instance.Entities;
             em.ForEntity((uint entity, ref Input input, ref Position position) =>
             {
-                em.ForEntity((uint solid, ref Tile tile, ) =>
-                {
+                // em.ForEntity((uint solid, ref Tile tile, ) =>
+                // {
 
-                });
+                // });
             });
         }
     }
