@@ -60,7 +60,8 @@ namespace Worm.Systems
             {
                 using var entities = new NativeList<AxisAlignedBox2>(Engine.Instance.Memory);
                 var broadaabb = collider.Bounds;
-                broadaabb.Center = new float2(position.X, position.Y);
+                broadaabb.Offset(position);
+                RenderingSystem.DebugDraw(broadaabb, Color.Orange);
 
                 // var amountX = move.SpeedX * dt;
                 // var amountY = move.SpeedY * dt;
@@ -68,18 +69,20 @@ namespace Worm.Systems
                 var amount = move.Speed * dt;
 
                 var targetaabb = broadaabb;
+                targetaabb.Offset(amount);
                 var targetPosition = position + amount;
 
 
-                targetaabb.Center = targetPosition;
+                //targetaabb.Offset(targetPosition);
                 broadaabb.Merge(targetaabb);
+                RenderingSystem.DebugDraw(targetaabb, Color.Green);
 
                 //gather all aabbs in our broadphase based on where the entity is moving to
                 em.ForEntity((uint other, ref Position otherPosition, ref Solid solid) =>
                 {
                     var solidArea = solid.Bounds;
-                    solidArea.Center = otherPosition;
-                    RenderingSystem.DebugDraw(solidArea, Color.Blue);
+                    solidArea.Offset(otherPosition);
+
                     if (solidArea.Intersects(broadaabb))
                         entities.Add(solidArea);
                 });
@@ -118,7 +121,7 @@ namespace Worm.Systems
                     newPosition[axis] += sign;
 
                     var worldaabb = collider.Bounds;
-                    worldaabb.Center = newPosition;
+                    worldaabb.Offset(newPosition);
 
                     if (worldaabb.Intersects(broadsweep.AsSpan(), out var index))
                     {
