@@ -133,7 +133,8 @@
         {
             var playerSpec = EntitySpec.Create<Position, Sprite, PlayerInput, TextureRegion, Collider, Move, Gravity, Input>();
             var player = _entities.Create(playerSpec);
-            _entities.Replace(player, new PlayerInput() { Speed = 200 });
+            _entities.Replace(player, new PlayerInput());
+            _entities.Replace(player, new Move() { Friction = new float2(0.85f), Acceleration = new float2(2000), Speed = float2.Zero });
             _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
             _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginX = 0.5f, OriginY = 1f });
             _entities.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromRect(new float2(16, 48), new float2(32, 48)) });

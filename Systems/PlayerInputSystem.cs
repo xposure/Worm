@@ -28,12 +28,13 @@ namespace Worm.Systems
                 playerInput.Keyboard = Microsoft.Xna.Framework.Input.Keyboard.GetState();
 
                 var keyboard = playerInput.Keyboard;
-                move.Speed = float2.Zero;
+                //move.Speed = float2.Zero;
+
 
                 if (keyboard.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.A))
-                    move.Speed.x = -playerInput.Speed;
+                    move.Speed.x -= move.Acceleration.x * dt;
                 else if (keyboard.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.D))
-                    move.Speed.x = playerInput.Speed;
+                    move.Speed.x += move.Acceleration.x * dt;
             });
         }
     }

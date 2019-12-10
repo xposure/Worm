@@ -8,6 +8,6 @@ public struct PlayerInput
     public KeyboardState Keyboard;
     public KeyboardState LastKeyboard;
 
-    public float Speed;
+    //public float Speed;
 
 }
