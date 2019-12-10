@@ -5,6 +5,7 @@ namespace Worm.Systems
     using Atma;
     using Atma.Common;
     using Atma.Entities;
+    using Atma.Math;
     using Atma.Memory;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
@@ -13,12 +14,35 @@ namespace Worm.Systems
 
     public class RenderingSystem : UnmanagedDispose, ISystem
     {
+        private struct DebugLine
+        {
+            public float2 Min, Max;
+            public Color Color;
+        }
+
         private BetterSpriteBatch _spriteBatch;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
 
         private List<EntityChunkList> _renderOrder = new List<EntityChunkList>();
         private Comparison<EntityChunkList> _renderSort;
+
+
+        private static NativeList<DebugLine> _debugLines;
+
+        public static void DebugDraw(in AxisAlignedBox2 box) => DebugDraw(box, Color.White);
+        public static void DebugDraw(in AxisAlignedBox2 box, in Color color)
+        {
+            var tl = box.Min;
+            var br = box.Max;
+            var tr = new float2(br.x, tl.y);
+            var bl = new float2(tl.x, br.y);
+
+            _debugLines.Add(new DebugLine() { Min = tl, Max = tr, Color = color });
+            _debugLines.Add(new DebugLine() { Min = bl, Max = br, Color = color });
+            _debugLines.Add(new DebugLine() { Min = tl, Max = bl, Color = color });
+            _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
+        }
 
         public void Init()
         {
@@ -27,6 +51,7 @@ namespace Worm.Systems
             _renderSort = new Comparison<EntityChunkList>((x, y) =>
                             x.Specification.GetGroupData<RenderLayer>().Layer -
                             y.Specification.GetGroupData<RenderLayer>().Layer);
+            _debugLines = new NativeList<DebugLine>(Engine.Instance.Memory, 1024);
         }
 
         public void Update(float dt)
@@ -185,9 +210,37 @@ namespace Worm.Systems
                     _spriteBatch.Render();
                 });
             }
+
+            em.ForEntity((uint cameraEntity, ref Camera camera, ref Position cameraPosition) =>
+            {
+                var region = new TextureRegion(0, 0, 1, 1);
+                _spriteBatch.Reset();
+                _spriteBatch.SetSamplerState(SamplerState.PointClamp);
+                _spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+
+                for (var i = 0; i < _debugLines.Length; i++)
+                {
+                    ref var line = ref _debugLines[i];
+                    // if (line.Min.y == line.Max.y)
+                    //     _spriteBatch.AddSprite(new float2(line.Min.x - 0.5f, line.Min.y), new Scale(line.Max.x - line.Min.x, 1), line.Color, region);
+                    // else if (line.Min.x == line.Max.x)
+                    //     _spriteBatch.AddSprite(new float2(line.Min.x, line.Min.y - 0.5f), new Scale(1, line.Max.y - line.Min.y), line.Color, region);
+                    if (line.Min.y == line.Max.y)
+                        _spriteBatch.AddSprite(line.Min, new Scale(line.Max.x - line.Min.x, 1), line.Color, region);
+                    else if (line.Min.x == line.Max.x)
+                        _spriteBatch.AddSprite(line.Min, new Scale(1, line.Max.y - line.Min.y), line.Color, region);
+                    else
+                        throw new NotImplementedException();
+                }
+
+                _spriteBatch.Render();
+            });
+            _debugLines.Reset();
         }
+
         protected override void OnUnmanagedDispose()
         {
+            _debugLines.Dispose();
             _spriteBatch.Dispose();
             _renderOrder.Clear();
         }

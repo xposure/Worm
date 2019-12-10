@@ -1,5 +1,6 @@
 using Atma.Math;
 using Atma.Memory;
+using Microsoft.Xna.Framework;
 
 namespace Worm.Systems
 {
@@ -52,11 +53,13 @@ namespace Worm.Systems
 
         private void MoveActor(float dt, uint entity, ref Move move, ref Position position, ref Collider collider)
         {
+            var aabb = collider.Bounds;
+            RenderingSystem.DebugDraw(aabb, Color.Green);
             var em = Engine.Instance.Entities;
             if (!collider.Disabled && !float2.ApproxEqual(move.Speed, float2.Zero))
             {
                 using var entities = new NativeList<AxisAlignedBox2>(Engine.Instance.Memory);
-                var broadaabb = collider.Area;
+                var broadaabb = collider.Bounds;
                 broadaabb.Center = new float2(position.X, position.Y);
 
                 // var amountX = move.SpeedX * dt;
@@ -67,14 +70,16 @@ namespace Worm.Systems
                 var targetaabb = broadaabb;
                 var targetPosition = position + amount;
 
+
                 targetaabb.Center = targetPosition;
                 broadaabb.Merge(targetaabb);
 
                 //gather all aabbs in our broadphase based on where the entity is moving to
                 em.ForEntity((uint other, ref Position otherPosition, ref Solid solid) =>
                 {
-                    var solidArea = solid.Area;
+                    var solidArea = solid.Bounds;
                     solidArea.Center = otherPosition;
+                    RenderingSystem.DebugDraw(solidArea, Color.Blue);
                     if (solidArea.Intersects(broadaabb))
                         entities.Add(solidArea);
                 });
@@ -112,11 +117,14 @@ namespace Worm.Systems
                     var newPosition = position;
                     newPosition[axis] += sign;
 
-                    var worldaabb = collider.Area;
+                    var worldaabb = collider.Bounds;
                     worldaabb.Center = newPosition;
 
                     if (worldaabb.Intersects(broadsweep.AsSpan(), out var index))
+                    {
+                        RenderingSystem.DebugDraw(broadsweep[index], Color.Red);
                         return false;
+                    }
 
                     position[axis] += sign;
                     m -= sign;

@@ -55,7 +55,7 @@ namespace Worm.Managers
 
     public static class Sprites
     {
-        public static SpriteTexture Missing, Circle, Square;
+        public static SpriteTexture White, Missing, Circle, Square;
 
         public static SpriteTexture Player;
 
@@ -73,7 +73,8 @@ namespace Worm.Managers
 
         public static void Init()
         {
-            Missing = InitMissingTexture();
+            Missing = InitPointTexture(Color.Magenta);
+            White = InitPointTexture(Color.White);
             Circle = InitCircleTexture();
             Square = InitSquareTexture();
             Player = AddTexture(@"p:\Games\Worm\sprite.png");
@@ -100,10 +101,10 @@ namespace Worm.Managers
             return spriteTexture;
         }
 
-        private static SpriteTexture InitMissingTexture()
+        private static SpriteTexture InitPointTexture(in Color color)
         {
             var texture = new Texture2D(Engine.Instance.GraphicsDevice, 1, 1);
-            texture.SetData(new Color[] { Color.Magenta });
+            texture.SetData(new Color[] { color });
             return AddTexture(texture);
         }
 

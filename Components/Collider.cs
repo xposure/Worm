@@ -10,7 +10,7 @@ public struct Collider
 {
     public ColliderType Type;
 
-    public AxisAlignedBox2 Area;
+    public AxisAlignedBox2 Bounds;
 
     public bool Disabled;
 }

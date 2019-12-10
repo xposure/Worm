@@ -119,9 +119,9 @@
                         if (line[x] == '1')
                         {
                             var wall = _entities.Create(wallSpec);
-                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE));
+                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
                             _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
-                            _entities.Replace(wall, new Solid() { Area = AxisAlignedBox2.FromDimensions(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
+                            _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
                         }
                     }
                     y++;
@@ -136,7 +136,7 @@
             _entities.Replace(player, new PlayerInput() { Speed = 100 });
             _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
             _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginY = 1f });
-            _entities.Replace(player, new Collider() { Type = ColliderType.Player, Area = AxisAlignedBox2.FromDimensions(float2.Zero, new float2(32, 48)) });
+            _entities.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromDimensions(float2.Zero, new float2(32, 48)) });
             _entities.Replace(player, TextureRegion.FromTexture(Sprites.Player, 16, 24, 0, 2));
             _entities.Replace(player, Gravity.Default);
             return player;

@@ -418,9 +418,11 @@ namespace Worm
         {
             FlushRender();
 
-
-            _vertexBuffer.SetData(_sprites, 0, _spriteIndex, SetDataOptions.Discard);//, 0, _vertexPosition, SetDataOptions.Discard);
-            _spriteIndex = 0;
+            if (_spriteIndex > 0)
+            {
+                _vertexBuffer.SetData(_sprites, 0, _spriteIndex, SetDataOptions.Discard);//, 0, _vertexPosition, SetDataOptions.Discard);
+                _spriteIndex = 0;
+            }
 
             if (!lastRender)
                 UpdateNextVertexBuffer();
