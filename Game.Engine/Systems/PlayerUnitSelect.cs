@@ -21,10 +21,10 @@ namespace Worm.Systems
             var em = Engine.Instance.Entities;
             em.ForEntity((uint entity, ref PlayerUnitSelect selected, ref PlayerInput playerInput, ref Position position) =>
             {
-                var mouse = playerInput.Mouse;
-                var mp = new Vector2(mouse.X, mouse.Y);
-                var p = new Vector2(position.X, position.Y);
-                selected.IsSelected = Vector2.DistanceSquared(mp, p) < 5;
+                // var mouse = playerInput.Mouse;
+                // var mp = new Vector2(mouse.X, mouse.Y);
+                // var p = new Vector2(position.X, position.Y);
+                // selected.IsSelected = Vector2.DistanceSquared(mp, p) < 5;
             });
         }
     }

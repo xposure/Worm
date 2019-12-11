@@ -203,11 +203,23 @@
             _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
             _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginX = 0.5f, OriginY = 1f });
             _entities.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromRect(new float2(16, 48), new float2(32, 48)) });
-            _entities.Replace(player, TextureRegion.FromTexture(Sprites.Player, 16, 24, 0, 2));
+            _entities.Replace(player, FromTexture(Sprites.Player, 16, 24, 0, 2));
             _entities.Replace(player, Gravity.Default);
             return player;
         }
+        public static TextureRegion FromTexture(Texture2D texture, int tileWidth, int tileHeight, int tileX, int tileY)
+        {
+            var tilesX = texture.Width / tileWidth;
+            var tilesY = texture.Height / tileHeight;
 
+            Assert.EqualTo(tilesX * tileWidth, texture.Width);
+            Assert.EqualTo(tilesY * tileHeight, texture.Height);
+
+            var tileW = 1f / tilesX;
+            var tileH = 1f / tilesY;
+
+            return TextureRegion.FromSize(tileX * tileW, tileY * tileW, tileW, tileH);
+        }
         private void CreateCamera(uint target)
         {
             var cameraSpec = EntitySpec.Create<Camera, Position>();

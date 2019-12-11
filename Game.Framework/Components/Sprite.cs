@@ -1,5 +1,3 @@
-using Microsoft.Xna.Framework;
-
 public struct Sprite
 {
     public uint TextureID;

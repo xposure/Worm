@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Game.Framework/bin/Debug/netcoreapp3.0/Game.Framework.dll",
+            "program": "${workspaceFolder}/Game.Engine/bin/Debug/netcoreapp3.0/Game.Engine.dll",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

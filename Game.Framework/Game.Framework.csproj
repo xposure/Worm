@@ -1,30 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <ItemGroup>
-    <MonoGameContentReference Include="**\*.mgcb" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Glob" Version="1.1.4" />
+ <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.0.0" />
-    <PackageReference Include="MonoGame.Content.Builder" Version="3.7.0.4" />
-    <PackageReference Include="MonoGame.Framework.DesktopGL.Core" Version="3.7.0.7" />
     <PackageReference Include="SimpleInjector" Version="4.8.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Entities\source\Atma.Entities.csproj" />
-    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Systems\source\Atma.Systems.csproj" />
-    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Memory\source\Atma.Memory.csproj" />
-    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Common\source\Atma.Common.csproj" />
-    <ProjectReference Include="..\..\..\Atma\Atma.Math\source\Atma.Math.csproj" />
+    <PackageReference Include="Atma.Framework" Version="2019.1211.1814.10" />
   </ItemGroup>
 
 </Project>

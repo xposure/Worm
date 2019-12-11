@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Game.Framework/Game.Framework.csproj",
+                "${workspaceFolder}/Game.Engine/Game.Engine.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Game.Framework/Game.Framework.csproj",
+                "${workspaceFolder}/Game.Engine/Game.Engine.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary",
                 "-c",
@@ -33,7 +33,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/Game.Framework/Game.Framework.csproj",
+                "${workspaceFolder}/Game.Engine/Game.Engine.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -46,7 +46,7 @@
             "args": [
                 "watch",
                 "run",
-                "${workspaceFolder}/Game.Framework/Game.Framework.csproj",
+                "${workspaceFolder}/Game.Engine/Game.Engine.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

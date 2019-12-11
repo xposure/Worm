@@ -1,0 +1,18 @@
+<package>  
+ <metadata> 
+   <id>Atma.Framework</id> 
+   <version>2019.1211.1814.10</version> 
+   <authors>xposure</authors> 
+   <owners>xposure</owners> 
+   <requireLicenseAcceptance>false</requireLicenseAcceptance> 
+   <description>Meta package of all the core components Atma framework.</description> 
+   <copyright>Copyright 2019</copyright> 
+   <dependencies> 
+     <dependency id="Atma.Common" version="2019.1211.1814.10" /> 
+     <dependency id="Atma.Memory" version="2019.1211.1814.10" /> 
+     <dependency id="Atma.Entities" version="2019.1211.1814.10" /> 
+     <dependency id="Atma.Systems" version="2019.1211.1814.10" /> 
+     <dependency id="Atma.Math" version="2019.1211.1814.10" /> 
+   </dependencies> 
+ </metadata> 
+</package> 
