@@ -22,6 +22,7 @@
     using Worm.Managers;
     using System.IO;
     using Atma.Math;
+    using SimpleInjector;
 
     public class Engine : Game
     {
@@ -36,6 +37,8 @@
         private ILogger _logger;
         private EntityManager _entities;
         public EntityManager Entities => _entities;
+
+        //private SystemManager
 
         private IAllocator _memory;
         public IAllocator Memory => _memory;
@@ -73,6 +76,7 @@
 
             // var player = Sprites.AddTexture(@"p:\Games\Worm\sprite.png");
             // var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
+            //var container = new Container();
 
             _systems.Add(new ColorLerpSystem());
             _systems.Add(new UnitSpawnerSystem());
