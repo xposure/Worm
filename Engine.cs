@@ -23,9 +23,14 @@
     using System.IO;
     using Atma.Math;
     using SimpleInjector;
+    using System.Reflection;
+    using Atma.Systems;
 
     public class Engine : Game
     {
+
+        private readonly static Container DI = new Container();
+
         public const int TILE_SIZE = 32;
 
         private static Engine _instance;
@@ -68,8 +73,65 @@
             _logger = _logFactory.CreateLogger<Engine>();
         }
 
+        protected override void Initialize()
+        {
+            DI.RegisterInstance(this);
+            DI.RegisterInstance(GraphicsDevice);
+            DI.RegisterInstance(graphics);
+            DI.RegisterSingleton<IAllocator, HeapAllocator>();
+            DI.RegisterInstance<ILoggerFactory>(_logFactory);
+            DI.Register(typeof(ILogger<>), typeof(Logger<>));
+
+            DI.RegisterSingleton<EntityManager>();
+            DI.RegisterSingleton<SystemManager>();
+
+
+            var asm = Assembly.GetExecutingAssembly();
+            var systemTypes =
+                from type in asm.GetExportedTypes()
+                where typeof(ISystem).IsAssignableFrom(type)
+                select type;
+
+            foreach (var it in systemTypes)
+                DI.Collection.Append(typeof(ISystem), it, Lifestyle.Singleton);
+
+            var systems = DI.GetAllInstances<ISystem>().ToArray();
+            var sm = DI.GetInstance<SystemManager>();
+            foreach (var system in systems)
+            {
+                _logger.LogDebug(system.Name);
+                sm.Add(system);
+            }
+
+            systems = DI.GetAllInstances<ISystem>().ToArray();
+            sm = DI.GetInstance<SystemManager>();
+            foreach (var system in systems)
+            {
+                _logger.LogDebug(system.Name);
+                //sm.Add(system);
+            }
+
+            sm.Init();
+
+            _memory = DI.GetInstance<IAllocator>();
+            _entities = DI.GetInstance<EntityManager>();
+
+            base.Initialize();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                DI?.Dispose();
+
+            base.Dispose(disposing);
+        }
+
         protected unsafe override void LoadContent()
         {
+            //DI.RegisterInstance(Sprites);
+            //DI.RegisterInstance(Animations);
+            //DI.RegisterInstance(Prefabs);
             Sprites.Init();
             Animations.Init();
             Prefabs.Init();
@@ -78,18 +140,17 @@
             // var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
             //var container = new Container();
 
-            _systems.Add(new ColorLerpSystem());
-            _systems.Add(new UnitSpawnerSystem());
-            _systems.Add(new CameraTrackSystem());
-            _systems.Add(new PlayerInputSystem());
-            _systems.Add(new MoveSystem());
-            _systems.Add(new PlayerUnitSelectSystem());
-            _systems.Add(new ColliderSystem());
-            _systems.Add(new AnimationSystem());
-            _systems.Add(new RenderingSystem());
+            // _systems.Add(new ColorLerpSystem());
+            // _systems.Add(new UnitSpawnerSystem());
+            // _systems.Add(new CameraTrackSystem());
+            // _systems.Add(new PlayerInputSystem());
+            // _systems.Add(new MoveSystem());
+            // _systems.Add(new PlayerUnitSelectSystem());
+            // _systems.Add(new ColliderSystem());
+            // _systems.Add(new AnimationSystem());
+            // _systems.Add(new RenderingSystem());
 
-            _memory = new HeapAllocator(_logFactory);
-            _entities = new EntityManager(_logFactory, _memory);
+            //_entities = new EntityManager(_logFactory, _memory);
 
             // var unitSpawnerSpec = EntitySpec.Create<Position>(new UnitSpawner() { Prefab = Prefabs.Player });
             // var p0 = Entities.Create(unitSpawnerSpec);
@@ -162,8 +223,12 @@
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             updateTimer.Restart();
 
+
+            var sm = DI.GetInstance<SystemManager>();
+            var em = DI.GetInstance<EntityManager>();
             foreach (var it in _systems)
-                it.Update(dt);
+                it.Tick(sm, em);
+            //it.Update(dt);
 
             base.Update(gameTime);
             updateTimer.Stop();
@@ -176,8 +241,8 @@
             GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
             renderTimer.Restart();
-            foreach (var it in _systems)
-                it.Draw(dt);
+            // foreach (var it in _systems)
+            //     it.Draw(dt);
 
             base.Draw(gameTime);
             renderTimer.Stop();
@@ -188,11 +253,9 @@
 
         protected override void UnloadContent()
         {
-            _entities.Dispose();
             Prefabs.Dispose();
             Animations.Dispose();
             Sprites.Dispose();
-            _memory.Dispose();
         }
     }
 }

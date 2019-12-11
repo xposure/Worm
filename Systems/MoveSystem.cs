@@ -4,40 +4,6 @@ using Microsoft.Xna.Framework;
 
 namespace Worm.Systems
 {
-
-    public struct Actor
-    {
-        public Position* position;
-    }
-
-    public unsafe class ActorSystem : System<Actor>
-    {
-        private EntityCommandBuffer buffer;
-
-
-        public void Execute(EntityManager entityManager, float dt)
-        {
-            OnBeforeExecute(entityManager, dt);
-            OnExecute(dt, 0, new Actor());
-            OnAfterExecute(entityManager, dt);
-        }
-
-        private override void OnBeforeExecute(EntityManager em, float dt)
-        {
-        }
-
-        private void OnExecute(float dt, uint entity, in Actor actor)
-        {
-            actor.position->X += 2 * dt;
-        }
-
-        private overrid void OnAfterExecute(EntityManager em, float dt)
-        {
-            buffer.Execute();
-        }
-
-    }
-
     //https://mattmakesgames.tumblr.com/post/127890619821/towerfall-physics
     public class MoveSystem : ISystem
     {

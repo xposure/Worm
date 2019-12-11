@@ -12,7 +12,7 @@ namespace Worm.Systems
     using Worm.Graphics;
     using Worm.Managers;
 
-    public class RenderingSystem : UnmanagedDispose, ISystem
+    public class RenderingSystem : UnmanagedDispose
     {
         private struct DebugLine
         {
