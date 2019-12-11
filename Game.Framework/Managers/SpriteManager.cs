@@ -77,7 +77,7 @@ namespace Worm.Managers
             White = InitPointTexture(Color.White);
             Circle = InitCircleTexture();
             Square = InitSquareTexture();
-            Player = AddTexture(@"p:\Games\Worm\sprite.png");
+            Player = AddTexture(@"Assets\sprite.png");
         }
 
         public static void Dispose()

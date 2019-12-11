@@ -172,7 +172,7 @@
 
         private void CreateWalls()
         {
-            using (var sr = File.OpenText(@"P:\Games\Worm\room.data"))
+            using (var sr = File.OpenText(@"Assets\room.data"))
             {
                 var wallSpec = EntitySpec.Create<Position, Sprite, Solid>();
                 string line = null;
