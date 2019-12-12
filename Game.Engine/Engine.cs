@@ -58,9 +58,10 @@
 
         private List<ISystem> _systems = new List<ISystem>();
 
-        private Task<Container> _geeReloadTask;
+        private Task<GameExecutionEngine> _geeReloadTask;
 
         private GameExecutionEngine _gee;
+        private bool _isRunning = true;
 
         public Engine()
         {
@@ -79,73 +80,63 @@
 
         private GameExecutionEngine CheckGEE()
         {
-            if (_gee.IsModified)
+            while (_isRunning)
             {
-                if (_geeReloadTask == null)
+                if (_gee == null || _gee.CheckChange())
                 {
-                    _geeReloadTask = Task.Run(() =>
-                    {
-                        var gee = new GameExecutionEngine(_memory, _entities, "Game.Logic\\Bin\\Game.Logic.dll");
-                        var container = CreateDI(gee);
+                    System.Console.WriteLine("Reloading");
+                    var container = CreateDI();
+                    var gee = new GameExecutionEngine(container, "Game.Logic\\bin\\Game.Logic.dll");
+                    gee.Init();
 
-                        return container;
-                    });
-                }
-                else if (_geeReloadTask.IsCompleted)
-                {
-                    if (_geeReloadTask.IsFaulted)
-                        throw new Exception("Failed to reload gee");
+                    if (!_initOnce)
+                        gee.InitOnce();
 
-                    DI?.Dispose();
-                    DI = _geeReloadTask.Result;
+                    _initOnce = true;
+                    return gee;
                 }
+
+                System.Threading.Thread.Sleep(100);
             }
-
             return null;
         }
 
-        private Container CreateDI(GameExecutionEngine gee)
+        protected override void OnExiting(object sender, EventArgs args)
+        {
+            _isRunning = false;
+        }
+        private bool _initOnce = false;
+        private Container CreateDI()
         {
             var container = new Container();
             //singletons
-            DI.RegisterInstance(this);
-            DI.RegisterInstance(GraphicsDevice);
-            DI.RegisterInstance(graphics);
-            DI.RegisterInstance<IAllocator>(_memory);
-            DI.RegisterInstance<EntityManager>(_entities);
+            container.RegisterInstance(this);
+            container.RegisterInstance(GraphicsDevice);
+            container.RegisterInstance(graphics);
+            container.RegisterInstance<IAllocator>(_memory);
+            container.RegisterInstance<EntityManager>(_entities);
 
             //logging
-            DI.RegisterInstance<ILoggerFactory>(_logFactory);
-            DI.Register(typeof(ILogger<>), typeof(Logger<>));
-
-            //new system manager
-            DI.RegisterSingleton<SystemManager>();
-
-            foreach (var it in gee.SystemTypes)
-                DI.Collection.Append(typeof(ISystem), it, Lifestyle.Singleton);
-
-            var systems = DI.GetAllInstances<ISystem>().ToArray();
-            var sm = DI.GetInstance<SystemManager>();
-            foreach (var system in systems)
-                sm.Add(system);
-
-            sm.Init();
+            container.RegisterInstance<ILoggerFactory>(_logFactory);
+            container.Register(typeof(ILogger<>), typeof(Logger<>));
 
             return container;
         }
 
         protected override void Initialize()
         {
-            Reload();
+            _geeReloadTask = Task.Run(() => CheckGEE());
             base.Initialize();
         }
 
         private void Reload()
         {
-            var di = CreateDI(null);
-            DI?.Dispose();
-            DI = di;
-
+            if (_geeReloadTask.IsCompletedSuccessfully)
+            {
+                _gee?.Dispose();
+                _gee = _geeReloadTask.Result;
+                _geeReloadTask = Task.Run(() => CheckGEE());
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -267,6 +258,7 @@
 
         protected override void Update(GameTime gameTime)
         {
+            Reload();
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
@@ -274,11 +266,13 @@
             updateTimer.Restart();
 
 
-            var sm = DI.GetInstance<SystemManager>();
-            var em = DI.GetInstance<EntityManager>();
-            foreach (var it in _systems)
-                it.Tick(sm, em);
-            //it.Update(dt);
+            _gee?.Update(dt);
+
+            // var sm = DI.GetInstance<SystemManager>();
+            // var em = DI.GetInstance<EntityManager>();
+            // foreach (var it in _systems)
+            //     it.Tick(sm, em);
+            // //it.Update(dt);
 
             base.Update(gameTime);
             updateTimer.Stop();

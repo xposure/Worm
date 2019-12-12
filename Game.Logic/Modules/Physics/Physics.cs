@@ -5,9 +5,10 @@ namespace Game.Logic.Modules.Physics
     public class Physics : SystemEntityProcessor
     {
 
-        public void Execute()
+        public void Execute(ref Position position)
         {
-
+            position.X += 1;
+            return;
         }
 
     }
