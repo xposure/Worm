@@ -25,11 +25,13 @@
     using SimpleInjector;
     using System.Reflection;
     using Atma.Systems;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     public class Engine : Game
     {
 
-        private readonly static Container DI = new Container();
+        private Container DI;
 
         public const int TILE_SIZE = 32;
 
@@ -38,14 +40,14 @@
 
         GraphicsDeviceManager graphics;
 
-        private ILoggerFactory _logFactory;
+        private readonly ILoggerFactory _logFactory;
         private ILogger _logger;
-        private EntityManager _entities;
+        private readonly EntityManager _entities;
         public EntityManager Entities => _entities;
 
         //private SystemManager
 
-        private IAllocator _memory;
+        private readonly IAllocator _memory;
         public IAllocator Memory => _memory;
 
         private Stopwatch updateTimer = new Stopwatch();
@@ -56,6 +58,10 @@
 
         private List<ISystem> _systems = new List<ISystem>();
 
+        private Task<Container> _geeReloadTask;
+
+        private GameExecutionEngine _gee;
+
         public Engine()
         {
             _instance = this;
@@ -63,66 +69,98 @@
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            _logFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddConsole(configure =>
-                {
-                });
-            });
-
+            _logFactory = LoggerFactory.Create(builder => { builder.AddConsole(configure => { }); });
             _logger = _logFactory.CreateLogger<Engine>();
+
+            _memory = new HeapAllocator(_logFactory);
+            _entities = new EntityManager(_logFactory, _memory);
+
         }
 
-        protected override void Initialize()
+        private GameExecutionEngine CheckGEE()
         {
+            if (_gee.IsModified)
+            {
+                if (_geeReloadTask == null)
+                {
+                    _geeReloadTask = Task.Run(() =>
+                    {
+                        var gee = new GameExecutionEngine(_memory, _entities, "Game.Logic\\Bin\\Game.Logic.dll");
+                        var container = CreateDI(gee);
+
+                        return container;
+                    });
+                }
+                else if (_geeReloadTask.IsCompleted)
+                {
+                    if (_geeReloadTask.IsFaulted)
+                        throw new Exception("Failed to reload gee");
+
+                    DI?.Dispose();
+                    DI = _geeReloadTask.Result;
+                }
+            }
+
+            return null;
+        }
+
+        private Container CreateDI(GameExecutionEngine gee)
+        {
+            var container = new Container();
+            //singletons
             DI.RegisterInstance(this);
             DI.RegisterInstance(GraphicsDevice);
             DI.RegisterInstance(graphics);
-            DI.RegisterSingleton<IAllocator, HeapAllocator>();
+            DI.RegisterInstance<IAllocator>(_memory);
+            DI.RegisterInstance<EntityManager>(_entities);
+
+            //logging
             DI.RegisterInstance<ILoggerFactory>(_logFactory);
             DI.Register(typeof(ILogger<>), typeof(Logger<>));
 
-            DI.RegisterSingleton<EntityManager>();
+            //new system manager
             DI.RegisterSingleton<SystemManager>();
 
-
-            var asm = Assembly.GetExecutingAssembly();
-            var systemTypes =
-                from type in asm.GetExportedTypes()
-                where typeof(ISystem).IsAssignableFrom(type)
-                select type;
-
-            foreach (var it in systemTypes)
+            foreach (var it in gee.SystemTypes)
                 DI.Collection.Append(typeof(ISystem), it, Lifestyle.Singleton);
 
             var systems = DI.GetAllInstances<ISystem>().ToArray();
             var sm = DI.GetInstance<SystemManager>();
             foreach (var system in systems)
-            {
-                _logger.LogDebug(system.Name);
                 sm.Add(system);
-            }
-
-            systems = DI.GetAllInstances<ISystem>().ToArray();
-            sm = DI.GetInstance<SystemManager>();
-            foreach (var system in systems)
-            {
-                _logger.LogDebug(system.Name);
-                //sm.Add(system);
-            }
 
             sm.Init();
 
-            _memory = DI.GetInstance<IAllocator>();
-            _entities = DI.GetInstance<EntityManager>();
+            return container;
+        }
 
+        protected override void Initialize()
+        {
+            Reload();
             base.Initialize();
+        }
+
+        private void Reload()
+        {
+            var di = CreateDI(null);
+            DI?.Dispose();
+            DI = di;
+
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
+            {
+                Prefabs.Dispose();
+                Animations.Dispose();
+                Sprites.Dispose();
+
                 DI?.Dispose();
+
+                _entities.Dispose();
+                _memory.Dispose();
+            }
 
             base.Dispose(disposing);
         }
@@ -263,11 +301,5 @@
             Window.Title = $"Update: {_updateAvg}, Render: {_renderAvg} {renderTimer.ElapsedMilliseconds}";
         }
 
-        protected override void UnloadContent()
-        {
-            Prefabs.Dispose();
-            Animations.Dispose();
-            Sprites.Dispose();
-        }
     }
 }

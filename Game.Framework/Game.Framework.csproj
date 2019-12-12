@@ -9,7 +9,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.0.0" />
     <PackageReference Include="SimpleInjector" Version="4.8.1" />
-    <PackageReference Include="Atma.Framework" Version="2019.1211.1814.10" />
   </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Common\source\Atma.Common.csproj" />
+    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Memory\source\Atma.Memory.csproj" />
+    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Entities\source\Atma.Entities.csproj" />
+    <ProjectReference Include="..\..\..\Atma\Atma.Framework\src\Atma.Systems\source\Atma.Systems.csproj" />
+    <ProjectReference Include="..\..\..\Atma\Atma.Math\source\Atma.Math.csproj" />
+  </ItemGroup>
 </Project>
