@@ -1,4 +1,4 @@
-namespace Worm
+namespace Game.Framework
 {
     using System;
     using System.Collections.Generic;
@@ -15,11 +15,9 @@ namespace Worm
     {
 
         private Type[] _systemTypes;
+        private Type[] _systemProducers;
 
         private Container _container;
-
-
-        public bool IsModified => false;
 
         private Assembly _assembly;
 
@@ -32,8 +30,8 @@ namespace Worm
         {
             _container = container;
             _pluginFile = plugin;
-            //_memory = memory;
-            //_entities = entityManager;
+            if (!Path.IsPathRooted(_pluginFile))
+                _pluginFile = Path.Combine(System.Environment.CurrentDirectory, _pluginFile);
 
         }
 
@@ -58,10 +56,20 @@ namespace Worm
             foreach (var it in _systemTypes)
                 _container.Collection.Append(typeof(ISystem), it, Lifestyle.Singleton);
 
-            var systems = _container.GetAllInstances<ISystem>().ToArray();
+            foreach (var it in _systemProducers)
+                _container.Collection.Append(typeof(SystemProducer), it, Lifestyle.Singleton);
+
             _systems = _container.GetInstance<SystemManager>();
-            foreach (var system in systems)
-                _systems.Add(system);
+            _systems.DefaultStage = nameof(UpdateStage);
+            _systems.AddStage(nameof(UpdateStage));
+            _systems.AddStage(nameof(RenderStage));
+
+            foreach (var system in _container.GetAllInstances<ISystem>())
+                _systems.Register(system);
+
+            foreach (var system in _container.GetAllInstances<SystemProducer>())
+                _systems.Register(system);
+
 
             _systems.Init();
         }
@@ -77,7 +85,7 @@ namespace Worm
             {
                 var d = dirs.Pop();
                 foreach (var it in Directory.GetDirectories(d))
-                    dirs.Push(d);
+                    dirs.Push(it);
 
                 var relDirName = d.Substring(dir.Length);
                 var dstDir = Path.Combine(dst, relDirName);
@@ -89,11 +97,6 @@ namespace Worm
         }
 
         //public IEnumerable<ISystem> Systems => container.GetAllInstances<ISystem>();
-
-        public virtual void InitOnce()
-        {
-
-        }
 
         public virtual void Init()
         {
@@ -115,6 +118,10 @@ namespace Worm
                             where typeof(ISystem).IsAssignableFrom(type)
                             select type).ToArray();
 
+            _systemProducers = (from type in _assembly.GetExportedTypes()
+                                where typeof(SystemProducer).IsAssignableFrom(type)
+                                select type).ToArray();
+
             var fi = new FileInfo(_pluginFile);
             _lastWrite = fi.LastWriteTimeUtc;
 
@@ -129,12 +136,12 @@ namespace Worm
 
         public virtual void Update(float dt)
         {
-            _systems.Tick();
+            _systems.Tick(nameof(UpdateStage));
         }
 
         public virtual void Draw(float dt)
         {
-
+            _systems.Tick(nameof(RenderStage));
         }
 
         protected override void OnManagedDispose()

@@ -10,28 +10,25 @@
 
     using Atma;
     using Atma.Memory;
-    using Atma.Common;
     using Atma.Entities;
-    using System;
-    using System.Diagnostics;
-    using Microsoft.Extensions.Logging;
-    using System.Collections.Generic;
-    using Worm.Graphics;
-    using Worm.Systems;
-    using System.Linq;
-    using Worm.Managers;
-    using System.IO;
     using Atma.Math;
-    using SimpleInjector;
-    using System.Reflection;
     using Atma.Systems;
-    using System.Threading;
+
+    using System;
+    using System.IO;
+    using System.Diagnostics;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+
+    using Worm.Systems;
+    using Worm.Managers;
+    using SimpleInjector;
+
+    using Game.Framework;
 
     public class Engine : Game
     {
-
-        private Container DI;
 
         public const int TILE_SIZE = 32;
 
@@ -55,8 +52,6 @@
 
         private AvgValue _updateAvg = new AvgValue(0.9f, 1f);
         private AvgValue _renderAvg = new AvgValue(0.9f, 1f);
-
-        private List<ISystem> _systems = new List<ISystem>();
 
         private Task<GameExecutionEngine> _geeReloadTask;
 
@@ -88,11 +83,6 @@
                     var container = CreateDI();
                     var gee = new GameExecutionEngine(container, "Game.Logic\\bin\\Game.Logic.dll");
                     gee.Init();
-
-                    if (!_initOnce)
-                        gee.InitOnce();
-
-                    _initOnce = true;
                     return gee;
                 }
 
@@ -105,7 +95,6 @@
         {
             _isRunning = false;
         }
-        private bool _initOnce = false;
         private Container CreateDI()
         {
             var container = new Container();
@@ -119,6 +108,8 @@
             //logging
             container.RegisterInstance<ILoggerFactory>(_logFactory);
             container.Register(typeof(ILogger<>), typeof(Logger<>));
+
+            container.Collection.Append(typeof(ISystem), typeof(SpriteRenderer), Lifestyle.Singleton);
 
             return container;
         }
@@ -147,8 +138,6 @@
                 Animations.Dispose();
                 Sprites.Dispose();
 
-                DI?.Dispose();
-
                 _entities.Dispose();
                 _memory.Dispose();
             }
@@ -158,6 +147,7 @@
 
         protected unsafe override void LoadContent()
         {
+            base.LoadContent();
             //DI.RegisterInstance(Sprites);
             //DI.RegisterInstance(Animations);
             //DI.RegisterInstance(Prefabs);
@@ -165,61 +155,39 @@
             Animations.Init();
             Prefabs.Init();
 
-            // var player = Sprites.AddTexture(@"p:\Games\Worm\sprite.png");
-            // var playerAnimation = Animations.CreateAnimation(player, 16, 24, Enumerable.Range(0, 4).Select(x => new Point(x, 2)).ToArray());
-            //var container = new Container();
-
-            // _systems.Add(new ColorLerpSystem());
-            // _systems.Add(new UnitSpawnerSystem());
-            // _systems.Add(new CameraTrackSystem());
-            // _systems.Add(new PlayerInputSystem());
-            // _systems.Add(new MoveSystem());
-            // _systems.Add(new PlayerUnitSelectSystem());
-            // _systems.Add(new ColliderSystem());
-            // _systems.Add(new AnimationSystem());
-            // _systems.Add(new RenderingSystem());
-
-            //_entities = new EntityManager(_logFactory, _memory);
-
-            // var unitSpawnerSpec = EntitySpec.Create<Position>(new UnitSpawner() { Prefab = Prefabs.Player });
-            // var p0 = Entities.Create(unitSpawnerSpec);
-            // Entities.Replace(p0, new Position(100, 100));
-
-            // var p1 = Entities.Create(unitSpawnerSpec);
-            // Entities.Replace(p1, new Position(200, 100));
-
-            // var p2 = Entities.Create(unitSpawnerSpec);
-            // Entities.Replace(p2, new Position(200, 200));
-
             CreateWalls();
-            var player = CreatePlayer();
-            CreateCamera(player);
-
-            foreach (var it in _systems)
-                it.Init();
+            //var player = CreatePlayer();
+            //CreateCamera(player);
+            CreateCamera(0);
         }
 
         private void CreateWalls()
         {
             using (var sr = File.OpenText(@"Assets\room.data"))
             {
-                var wallSpec = EntitySpec.Create<Position, Sprite, Solid>();
-                string line = null;
-                var y = 0;
-                while ((line = sr.ReadLine()) != null)
-                {
-                    for (var x = 0; x < line.Length; x++)
-                    {
-                        if (line[x] == '1')
-                        {
-                            var wall = _entities.Create(wallSpec);
-                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
-                            _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
-                            _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
-                        }
-                    }
-                    y++;
-                }
+                var wallSpec = EntitySpec.Create<Position, Sprite, Color, Solid>();
+
+                var wall2 = _entities.Create(wallSpec);
+                _entities.Replace(wall2, new Sprite(1, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
+                _entities.Replace(wall2, new Position(0, 0));
+                _entities.Replace(wall2, Color.Green);
+
+                // string line = null;
+                // var y = 0;
+                // while ((line = sr.ReadLine()) != null)
+                // {
+                //     for (var x = 0; x < line.Length; x++)
+                //     {
+                //         if (line[x] == '1')
+                //         {
+                //             var wall = _entities.Create(wallSpec);
+                //             _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
+                //             _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
+                //             _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
+                //         }
+                //     }
+                //     y++;
+                // }
             }
         }
 
@@ -258,6 +226,8 @@
 
         protected override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
+
             Reload();
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
@@ -265,30 +235,23 @@
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             updateTimer.Restart();
 
-
             _gee?.Update(dt);
 
-            // var sm = DI.GetInstance<SystemManager>();
-            // var em = DI.GetInstance<EntityManager>();
-            // foreach (var it in _systems)
-            //     it.Tick(sm, em);
-            // //it.Update(dt);
-
-            base.Update(gameTime);
             updateTimer.Stop();
             _updateAvg += updateTimer;
         }
 
         protected override void Draw(GameTime gameTime)
         {
+            base.Draw(gameTime);
+
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
             renderTimer.Restart();
-            // foreach (var it in _systems)
-            //     it.Draw(dt);
 
-            base.Draw(gameTime);
+            _gee?.Draw(dt);
+
             renderTimer.Stop();
             _renderAvg += renderTimer;
 

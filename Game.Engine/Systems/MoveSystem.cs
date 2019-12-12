@@ -59,7 +59,7 @@ namespace Worm.Systems
         private void MoveActor(float dt, uint entity, ref Move move, ref Position position, ref Collider collider)
         {
             var aabb = collider.Bounds;
-            RenderingSystem.DebugDraw(aabb, Color.Green);
+            //SpriteRenderer.DebugDraw(aabb, Color.Green);
             var em = Engine.Instance.Entities;
 
             if (!collider.Disabled && !float2.ApproxEqual(move.Speed, float2.Zero))
@@ -67,7 +67,7 @@ namespace Worm.Systems
                 using var entities = new NativeList<AxisAlignedBox2>(Engine.Instance.Memory);
                 var broadaabb = collider.Bounds;
                 broadaabb.Offset(position);
-                RenderingSystem.DebugDraw(broadaabb, Color.Orange);
+                //SpriteRenderer.DebugDraw(broadaabb, Color.Orange);
 
                 // var amountX = move.SpeedX * dt;
                 // var amountY = move.SpeedY * dt;
@@ -81,7 +81,7 @@ namespace Worm.Systems
 
                 //targetaabb.Offset(targetPosition);
                 broadaabb.Merge(targetaabb);
-                RenderingSystem.DebugDraw(targetaabb, Color.Green);
+                //SpriteRenderer.DebugDraw(targetaabb, Color.Green);
 
 
                 //gather all aabbs in our broadphase based on where the entity is moving to
@@ -132,7 +132,7 @@ namespace Worm.Systems
 
                     if (worldaabb.Intersects(broadsweep.AsSpan(), out var index))
                     {
-                        RenderingSystem.DebugDraw(broadsweep[index], Color.Red);
+                        //SpriteRenderer.DebugDraw(broadsweep[index], Color.Red);
                         return false;
                     }
 
