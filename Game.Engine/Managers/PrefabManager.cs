@@ -6,7 +6,6 @@ namespace Worm.Managers
     using HashCode = Atma.HashCode;
     using Atma.Entities;
     using Microsoft.Xna.Framework;
-    using Worms.Prefabs;
 
     public interface IPrefab
     {
@@ -72,24 +71,24 @@ namespace Worm.Managers
 
         public static void Init()
         {
-            Player = InitPlayer();
+            //Player = InitPlayer();
         }
 
-        private unsafe static Prefab InitPlayer()
-        {
-            Span<ComponentType> componentTypes = stackalloc[] {
-                ComponentType<Position>.Type,
-                ComponentType<Velocity>.Type,
-                ComponentType<Sprite>.Type,
-                ComponentType<Scale>.Type,
-                ComponentType<SpriteAnimation>.Type,
-                ComponentType<Color>.Type,
-                ComponentType<TextureRegion>.Type,
-                ComponentType<PlayerInput>.Type,
-                ComponentType<PlayerUnitSelect>.Type,
-            };
-            return AddPrefab<PlayerPrefab>(new EntitySpec(componentTypes));
-        }
+        // private unsafe static Prefab InitPlayer()
+        // {
+        //     Span<ComponentType> componentTypes = stackalloc[] {
+        //         ComponentType<Position>.Type,
+        //         ComponentType<Velocity>.Type,
+        //         ComponentType<Sprite>.Type,
+        //         ComponentType<Scale>.Type,
+        //         ComponentType<SpriteAnimation>.Type,
+        //         ComponentType<Color>.Type,
+        //         ComponentType<TextureRegion>.Type,
+        //         ComponentType<PlayerInput>.Type,
+        //         ComponentType<PlayerUnitSelect>.Type,
+        //     };
+        //     return AddPrefab<PlayerPrefab>(new EntitySpec(componentTypes));
+        // }
 
         public static Prefab AddPrefab<T>(EntitySpec spec)
             where T : IPrefab, new()

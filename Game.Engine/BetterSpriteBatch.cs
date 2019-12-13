@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Atma;
 using Atma.Common;
+using Atma.Math;
 using Atma.Memory;
 using Game.Framework;
 using Game.Framework.Managers;
@@ -12,31 +13,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Worm
 {
-    [StructLayout(LayoutKind.Sequential, Pack = 0)]
-    public struct SpriteVertex
-    {
-        [VertexElement(VertexElementType.Float2, VertexSemantic.Position)]
-        public Position Position;
-
-        [VertexElement(VertexElementType.Color, VertexSemantic.Color)]
-        public Color Color;
-
-        [VertexElement(VertexElementType.Float2, VertexSemantic.Texture)]
-        public TextureCoord TextureCoord;
-    }
-
-
-    [StructLayout(LayoutKind.Sequential, Pack = 0)]
-    [VertexGroup(typeof(SpriteVertex))]
-    public struct GpuSprite
-    {
-        public SpriteVertex TL;
-        public SpriteVertex TR;
-        public SpriteVertex BL;
-        public SpriteVertex BR;
-
-    }
-
     public readonly ref struct BulkSrpiteOperation
     {
         private readonly BetterSpriteBatch _batch;
@@ -57,15 +33,17 @@ namespace Worm
     [AutoRegister(true)]
     public class DrawContextFactory
     {
+        private readonly ITextureManager _textures;
         private readonly IGraphicsBufferFactory _bufferFactory;
         private readonly RenderCommandFactory _renderCommandFactory;
-        public DrawContextFactory(IGraphicsBufferFactory bufferFactory, RenderCommandFactory renderCommandFactory)
+        public DrawContextFactory(ITextureManager textures, IGraphicsBufferFactory bufferFactory, RenderCommandFactory renderCommandFactory)
         {
+            _textures = textures;
             _bufferFactory = bufferFactory;
             _renderCommandFactory = renderCommandFactory;
         }
 
-        public BetterSpriteBatch CreateDrawContext() => new BetterSpriteBatch(_bufferFactory, _renderCommandFactory.Create());
+        public BetterSpriteBatch CreateDrawContext() => new BetterSpriteBatch(_textures, _bufferFactory, _renderCommandFactory.Create());
     }
 
     public class BetterSpriteBatch : UnmanagedDispose
@@ -94,21 +72,12 @@ namespace Worm
             }
         }
 
+        private ITextureManager _textures;
         private IGraphicsBufferFactory _bufferFactory;
 
-        private RenderCommandBuffer _renderCommands;
-        private BasicEffect _defaultEffect;
-        private GraphicsDevice _device;
-        private Texture2D _defaultTexture;
-        private DepthStencilState _defaultDepth = DepthStencilState.None;
-        private BlendState _defaultBlend = BlendState.NonPremultiplied;
-        private RasterizerState _defaultRasterizer = RasterizerState.CullNone;
-        private SamplerState _defaultSampler = SamplerState.PointClamp;
-
-        private Effect Effect => _defaultEffect;
-
-        private Texture2D _currentTexture = null;
-
+        private IRenderCommandBuffer _renderCommands;
+        private ITexture2D _defaultTexture;
+        private ITexture2D _currentTexture = null;
         private IIndexBuffer16 _indexBuffer;
 
         private int _primitiveCount = 0;
@@ -122,39 +91,29 @@ namespace Worm
         private List<IVertexBuffer<GpuSprite>> _allBuffers = new List<IVertexBuffer<GpuSprite>>();
         private bool _isInBulkOperation = false;
 
-        private Viewport _lastViewport = new Viewport();
-        private Matrix _projection = Matrix.Identity;
 
         public int Triangles => _renderCommands.Triangles;
         public int Commands => _renderCommands.Commands;
 
-        public BetterSpriteBatch(IGraphicsBufferFactory bufferFactory, RenderCommandBuffer renderCommands)
+        public BetterSpriteBatch(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandBuffer renderCommands)
         {
+            _textures = textures;
             _bufferFactory = bufferFactory;
             _renderCommands = renderCommands;
-            _device = _renderCommands.GraphicsDevice;
 
             _bufferPool = new ObjectPool<IVertexBuffer<GpuSprite>>(() =>
             {
                 var buffer = _bufferFactory.CreateVertex<GpuSprite>(MAX_SPRITES * 4, true);
-                //var buffer = new DynamicVertexBuffer(_device, SpriteVertex.VertexDeclaration, MAX_SPRITES * 4, BufferUsage.WriteOnly);
                 _allBuffers.Add(buffer);
                 return buffer;
             });
             _sprites = new GpuSprite[MAX_SPRITES];
-            _renderCommands = renderCommands;
 
-            _defaultEffect = new BasicEffect(_device);
-            _defaultEffect.TextureEnabled = true;
-            _defaultEffect.VertexColorEnabled = true;
-
-            _defaultTexture = new Texture2D(_device, 1, 1);
-            _defaultTexture.SetData(new[] { Color.White });
+            _defaultTexture = _textures["default"];//  new Texture2D(_device, 1, 1);
+            //_defaultTexture.SetData(new[] { Color.White });
 
             _indexBuffer = _bufferFactory.CreateIndex16(IndexData.Length, false);
             _indexBuffer.SetData(IndexData);
-            //_indexBuffer = new IndexBuffer(_device, IndexElementSize.SixteenBits, IndexData.Length, BufferUsage.None);
-            //_indexBuffer.SetData(IndexData);
 
             for (var i = 0; i < MAX_SPRITES; ++i)
             {
@@ -167,40 +126,12 @@ namespace Worm
             Reset();
         }
 
-        private void UpdateProjection()
-        {
-            // set up our matrix to match basic effect.
-            Viewport viewport = _device.Viewport;
-            //
-            var vp = _device.Viewport;
-            if ((_lastViewport.Width != vp.Width) || (_lastViewport.Height != vp.Height))
-            {
-                _projection = Matrix.Identity;
-                // Normal 3D cameras look into the -z direction (z = 1 is in front of z = 0). The
-                // sprite batch layer depth is the opposite (z = 0 is in front of z = 1).
-                // --> We get the correct matrix with near plane 0 and far plane -1.
-                Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, -1, out _projection);
 
-                // Some platforms require a half pixel offset to match DX.
-                //if (NeedsHalfPixelOffset)
-                {
-                    _projection.M41 += -0.5f * _projection.M11;
-                    _projection.M42 += -0.5f * _projection.M22;
-                }
-
-                _defaultEffect.World = Matrix.Identity;
-                _defaultEffect.Projection = _projection;
-                _defaultEffect.View = Matrix.Identity;
-
-                _lastViewport = vp;
-
-            }
-        }
 
         public float TexelWidth => 1f / _currentTexture.Width;
         public float TexelHeight => 1f / _currentTexture.Height;
 
-        public void SetTexture(Texture2D texture)
+        public void SetTexture(ITexture2D texture)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             if (_currentTexture != texture)
@@ -211,44 +142,44 @@ namespace Worm
             }
         }
 
-        public void SetBlendState(BlendState blendState)
+        // public void SetBlendState(BlendState blendState)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     FlushRender();
+        //     _renderCommands.SetBlendState(blendState);
+        // }
+        // public void SetDepthState(DepthStencilState depthState)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     FlushRender();
+        //     _renderCommands.SetDepthState(depthState);
+        // }
+        // public void SetRasterizerState(RasterizerState rasitizerState)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     FlushRender();
+        //     _renderCommands.SetRasterizerState(rasitizerState);
+        // }
+
+        public void SetCamera(in float4x4 matrix)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             FlushRender();
-            _renderCommands.SetBlendState(blendState);
-        }
-        public void SetDepthState(DepthStencilState depthState)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            FlushRender();
-            _renderCommands.SetDepthState(depthState);
-        }
-        public void SetRasterizerState(RasterizerState rasitizerState)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            FlushRender();
-            _renderCommands.SetRasterizerState(rasitizerState);
+            _renderCommands.SetCamera(RenderCameraType.World, matrix);
         }
 
-        public void SetCamera(Matrix matrix)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            FlushRender();
-            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.World, matrix);
-        }
-
-        public void SetSamplerState(SamplerState samplerState)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            FlushRender();
-            _renderCommands.SetSamplerState(samplerState);
-        }
-        public void SetEffect(Effect effect)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            FlushRender();
-            _renderCommands.SetEffect(effect);
-        }
+        // public void SetSamplerState(SamplerState samplerState)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     FlushRender();
+        //     _renderCommands.SetSamplerState(samplerState);
+        // }
+        // public void SetEffect(Effect effect)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     FlushRender();
+        //     _renderCommands.SetEffect(effect);
+        // }
 
         // //MonoGame draw method
         // public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
@@ -365,26 +296,26 @@ namespace Worm
         {
             ref var sprite = ref _sprites[_spriteIndex++];
 
+            var packedColor = color.PackedValue;
             sprite.TL.Position = position;
-            sprite.TL.Color = color;
-            sprite.TL.TextureCoord.X = texCoord.X0;
-            sprite.TL.TextureCoord.Y = texCoord.Y0;
-
             sprite.TR.Position.X = position.X + scale.Width;
             sprite.TR.Position.Y = position.Y;
-            sprite.TR.Color = color;
-            sprite.TR.TextureCoord.X = texCoord.X1;
-            sprite.TR.TextureCoord.Y = texCoord.Y0;
-
             sprite.BR.Position.X = position.X + scale.Width;
             sprite.BR.Position.Y = position.Y + scale.Height;
-            sprite.BR.Color = color;
-            sprite.BR.TextureCoord.X = texCoord.X1;
-            sprite.BR.TextureCoord.Y = texCoord.Y1;
-
             sprite.BL.Position.X = position.X;
             sprite.BL.Position.Y = position.Y + scale.Height;
-            sprite.BL.Color = color;
+
+            sprite.TL.Color = packedColor;
+            sprite.TR.Color = packedColor;
+            sprite.BR.Color = packedColor;
+            sprite.BL.Color = packedColor;
+
+            sprite.TL.TextureCoord.X = texCoord.X0;
+            sprite.TL.TextureCoord.Y = texCoord.Y0;
+            sprite.TR.TextureCoord.X = texCoord.X1;
+            sprite.TR.TextureCoord.Y = texCoord.Y0;
+            sprite.BR.TextureCoord.X = texCoord.X1;
+            sprite.BR.TextureCoord.Y = texCoord.Y1;
             sprite.BL.TextureCoord.X = texCoord.X0;
             sprite.BL.TextureCoord.Y = texCoord.Y1;
 
@@ -394,9 +325,9 @@ namespace Worm
                 CompleteBuffer();
         }
 
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale) => AddSprite(texture, position, scale, Color.White, new TextureRegion(0, 0, 1, 1));
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color) => AddSprite(texture, position, scale, color, new TextureRegion(0, 0, 1, 1));
-        public void AddSprite(Texture2D texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
+        public void AddSprite(ITexture2D texture, in Position position, in Scale scale) => AddSprite(texture, position, scale, Color.White, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(ITexture2D texture, in Position position, in Scale scale, in Color color) => AddSprite(texture, position, scale, color, new TextureRegion(0, 0, 1, 1));
+        public void AddSprite(ITexture2D texture, in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
         {
             Assert.EqualTo(_isInBulkOperation, false);
             SetTexture(texture);
@@ -431,7 +362,7 @@ namespace Worm
             if (_primitiveCount > 0)
             {
                 var startIndex = _spriteIndex * 4 - _primitiveCount * 2;
-                _renderCommands.RenderOp(startIndex, _primitiveCount);
+                _renderCommands.RenderPrimitives(startIndex, _primitiveCount);
                 _primitiveCount = 0;
             }
         }
@@ -452,7 +383,7 @@ namespace Worm
         public void Render()
         {
             Assert.EqualTo(_isInBulkOperation, false);
-            UpdateProjection();
+            _renderCommands.UpdateProjection();
             CompleteBuffer(true);
             _renderCommands.Render();
             Reset();
@@ -460,19 +391,12 @@ namespace Worm
 
         public void Reset()
         {
-            UpdateProjection();
-
             //TODO: renderCommand should support updating effect params (like WVP)
-            _renderCommands.SetDepthState(_defaultDepth);
-            _renderCommands.SetBlendState(_defaultBlend);
-            _renderCommands.SetRasterizerState(_defaultRasterizer);
-            _renderCommands.SetSamplerState(_defaultSampler);
+            _renderCommands.ResetState();
+
             _renderCommands.SetTexture(_defaultTexture);
-            _renderCommands.SetEffect(_defaultEffect);
             _renderCommands.SetIndexBuffer(_indexBuffer);
-            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.World, Matrix.Identity);
-            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.Projection, _projection);
-            _renderCommands.SetCamera(RenderCommandBuffer.CameraType.View, Matrix.Identity);
+
             _currentTexture = _defaultTexture;
 
             ReturnUsedBufers();
@@ -513,7 +437,6 @@ namespace Worm
             _defaultTexture.Dispose();
             _renderCommands.Dispose();
             _indexBuffer.Dispose();
-            _defaultEffect.Dispose();
         }
     }
 }

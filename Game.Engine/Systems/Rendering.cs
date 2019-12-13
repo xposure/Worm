@@ -9,6 +9,7 @@ namespace Worm.Systems
     using Atma.Memory;
     using Atma.Systems;
     using Game.Framework;
+    using Game.Framework.Managers;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
     using Worm.Managers;
@@ -23,6 +24,7 @@ namespace Worm.Systems
         }
 
         private BetterSpriteBatch _spriteBatch;
+        private ITextureManager _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
 
@@ -45,8 +47,9 @@ namespace Worm.Systems
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
-        public SpriteRenderer(DrawContextFactory drawContextFactory)
+        public SpriteRenderer(ITextureManager texture, DrawContextFactory drawContextFactory)
         {
+            _textures = texture;
             _spriteBatch = drawContextFactory.CreateDrawContext();
         }
 
@@ -95,16 +98,18 @@ namespace Worm.Systems
                 em.ForEntity((uint cameraEntity, ref Camera camera, ref Position cameraPosition) =>
                 {
                     _spriteBatch.Reset();
-                    _spriteBatch.SetSamplerState(SamplerState.PointClamp);
-                    _spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+                    //_spriteBatch.SetSamplerState(SamplerState.PointClamp);
 
-                    var currentTexture = Sprites.Missing;
-                    _spriteBatch.SetTexture(Sprites.Missing);
+                    //_spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+                    _spriteBatch.SetCamera(float4x4.Translate(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+
+                    var currentTexture = _textures["default"];
+                    _spriteBatch.SetTexture(currentTexture);
 
                     var texelWidth = _spriteBatch.TexelWidth;
                     var texelHeight = _spriteBatch.TexelHeight;
-                    var textureWidth = currentTexture.GpuTexture.Width;
-                    var textureHeight = currentTexture.GpuTexture.Height;
+                    var textureWidth = currentTexture.Width;
+                    var textureHeight = currentTexture.Height;
 
                     //var renderLayer = renderGroup.Specification.GetGroupData<RenderLayer>();
 
@@ -137,13 +142,13 @@ namespace Worm.Systems
                                 ref var color = ref colors[colorComponentIndex > -1 ? i : 0];
                                 ref var region = ref regions[regionComponentIndex > -1 ? i : 0];
 
-                                if (currentTexture != sprite.TextureID)
+                                if (currentTexture.ID != sprite.TextureID)
                                 {
-                                    _spriteBatch.SetTexture(Sprites.GetTexture(sprite.TextureID));
+                                    _spriteBatch.SetTexture(_textures[sprite.TextureID]);
                                     texelWidth = _spriteBatch.TexelWidth;
                                     texelHeight = _spriteBatch.TexelHeight;
-                                    textureWidth = currentTexture.GpuTexture.Width;
-                                    textureHeight = currentTexture.GpuTexture.Height;
+                                    textureWidth = currentTexture.Width;
+                                    textureHeight = currentTexture.Height;
                                 }
 
                                 //TODO: rotation

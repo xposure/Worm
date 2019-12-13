@@ -4,9 +4,14 @@ namespace Game.Framework.Managers
     using System.Collections.Generic;
     using Atma;
 
-    public interface ITexture2D : IDisposable
+    public interface ITexture : IDisposable
     {
         uint ID { get; }
+        void Bind();
+    }
+
+    public interface ITexture2D : ITexture
+    {
         int Width { get; }
         int Height { get; }
         void SetData<T>(T[] data) where T : struct;
@@ -27,9 +32,24 @@ namespace Game.Framework.Managers
     {
         private Dictionary<uint, ITexture2D> _textures = new Dictionary<uint, ITexture2D>();
 
-        public ITexture2D this[string name] => throw new NotImplementedException();
+        public ITexture2D this[string name] => this[GetId(name)];
 
-        public ITexture2D this[uint textureId] => throw new NotImplementedException();
+        public ITexture2D this[uint textureId]
+        {
+            get
+            {
+                //TODO: create default texture with an init method
+                if (!_textures.TryGetValue(textureId, out var texture))
+                    return _textures[GetId("default")];
+
+                return texture;
+            }
+        }
+
+        public TextureManagerBase()
+        {
+
+        }
 
         public ITexture2D LoadFromFile(string name, string loadFile)
         {

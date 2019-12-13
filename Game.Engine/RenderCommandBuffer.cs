@@ -2,6 +2,7 @@ namespace Worm
 {
     using System.Collections.Generic;
     using Atma;
+    using Atma.Math;
     using Atma.Memory;
     using Game.Framework;
     using Game.Framework.Managers;
@@ -23,7 +24,7 @@ namespace Worm
         public RenderCommandBuffer Create() => new RenderCommandBuffer(_memory, _device);
     }
 
-    public unsafe class RenderCommandBuffer : UnmanagedDispose
+    public unsafe class RenderCommandBuffer : UnmanagedDispose, IRenderCommandBuffer
     {
         private enum CommandTypes
         {
@@ -81,24 +82,17 @@ namespace Worm
         //     }
         // }
 
-        public enum CameraType
-        {
-            World,
-            Projection,
-            View
-        }
-
         private struct CameraOperation
         {
             public CommandTypes CommandType;
             public int Size;
-            public CameraType CameraType;
+            public RenderCameraType RenderCameraType;
             public Matrix Matrix;
 
-            public CameraOperation(CameraType cameraType, Matrix matrix)
+            public CameraOperation(RenderCameraType cameraType, Matrix matrix)
             {
                 CommandType = CommandTypes.Camera;
-                CameraType = cameraType;
+                RenderCameraType = cameraType;
                 Matrix = matrix;
                 Size = sizeof(CameraOperation);
             }
@@ -125,13 +119,24 @@ namespace Worm
 
         private NativeBuffer _buffer;
         private readonly GraphicsDevice _device;
+        private BasicEffect _defaultEffect;
+        private DepthStencilState _defaultDepth = DepthStencilState.None;
+        private BlendState _defaultBlend = BlendState.NonPremultiplied;
+        private RasterizerState _defaultRasterizer = RasterizerState.CullNone;
+        private SamplerState _defaultSampler = SamplerState.PointClamp;
 
         public GraphicsDevice GraphicsDevice => _device;
+        private float4x4 _projection = float4x4.Identity;
+        private Viewport _lastViewport = new Viewport();
 
         public RenderCommandBuffer(IAllocator allocator, GraphicsDevice device)
         {
             _buffer = new NativeBuffer(allocator);
             _device = device;
+
+            _defaultEffect = new BasicEffect(_device);
+            _defaultEffect.TextureEnabled = true;
+            _defaultEffect.VertexColorEnabled = true;
         }
 
         private List<BlendState> _blendStates = new List<BlendState>();
@@ -166,8 +171,8 @@ namespace Worm
             _buffer.Add(new GraphicsStateChange(CommandTypes.Sampler, index));
         }
 
-        private List<Texture> _textures = new List<Texture>();
-        public void SetTexture(Texture texture)
+        private List<ITexture> _textures = new List<ITexture>();
+        public void SetTexture(ITexture texture)
         {
             var index = _textures.Count;
             _textures.Add(texture);
@@ -198,12 +203,19 @@ namespace Worm
             _buffer.Add(new GraphicsStateChange(CommandTypes.VertexBuffer, index));
         }
 
-        public void SetCamera(CameraType cameraType, Matrix matrix)
+        public void SetCamera(RenderCameraType cameraType, in float4x4 matrix)
         {
-            _buffer.Add(new CameraOperation(cameraType, matrix));
+            _buffer.Add(new CameraOperation(cameraType, Convert4x4(matrix)));
         }
 
-        public void RenderOp(int startIndex, int primitiveCount)
+        private static Matrix Convert4x4(in float4x4 m)
+            => new Matrix(Convert4(m.Column0), Convert4(m.Column1), Convert4(m.Column2), Convert4(m.Column3));
+
+        private static Vector2 Convert2(in float2 it) => new Vector2(it.x, it.y);
+        private static Vector3 Convert3(in float3 it) => new Vector3(it.x, it.y, it.z);
+        private static Vector4 Convert4(in float4 it) => new Vector4(it.x, it.y, it.z, it.w);
+
+        public void RenderPrimitives(int startIndex, int primitiveCount)
         {
             _buffer.Add(new RenderOperation(startIndex, primitiveCount));
         }
@@ -252,10 +264,9 @@ namespace Worm
                         }
                     case CommandTypes.Texture:
                         {
-                            var tex = _textures[((GraphicsStateChange*)cmd)->StateIndex];
-                            _device.Textures[0] = tex;
-                            if (currentEffect is BasicEffect basic && tex is Texture2D tex2d)
-                                basic.Texture = tex2d;
+                            _textures[((GraphicsStateChange*)cmd)->StateIndex].Bind();
+                            if (currentEffect is BasicEffect basic && _device.Textures[0] is Texture2D tex)
+                                basic.Texture = tex;
 
                             break;
                         }
@@ -274,12 +285,15 @@ namespace Worm
                             Assert.EqualTo(currentEffect is BasicEffect, true);
                             var effect = (BasicEffect)currentEffect;
                             var it = (CameraOperation*)cmd;
-                            if (it->CameraType == CameraType.World)
+                            if (it->RenderCameraType == RenderCameraType.World)
                                 effect.World = it->Matrix;
-                            else if (it->CameraType == CameraType.View)
+                            else if (it->RenderCameraType == RenderCameraType.View)
                                 effect.View = it->Matrix;
-                            else if (it->CameraType == CameraType.Projection)
-                                effect.Projection = it->Matrix;
+                            else if (it->RenderCameraType == RenderCameraType.Projection)
+                            {
+                                //Matrix.CreateOrthographicOffCenter(0, 800, 480, 0, 0, -1, out var projection);                                
+                                effect.Projection = Convert4x4(_projection);
+                            }
                             else
                                 throw new System.NotImplementedException();
                             break;
@@ -319,8 +333,56 @@ namespace Worm
             _vertices.Clear();
         }
 
+
+        public void ResetState()
+        {
+            UpdateProjection();
+            SetEffect(_defaultEffect);
+            SetDepthState(_defaultDepth);
+            SetBlendState(_defaultBlend);
+            SetRasterizerState(_defaultRasterizer);
+            SetSamplerState(_defaultSampler);
+            SetCamera(RenderCameraType.World, float4x4.Identity);
+            SetCamera(RenderCameraType.Projection, _projection);
+            SetCamera(RenderCameraType.View, float4x4.Identity);
+        }
+
+        public unsafe void UpdateProjection()
+        {
+            // set up our matrix to match basic effect.
+            Viewport viewport = _device.Viewport;
+            //
+            var vp = _device.Viewport;
+            if ((_lastViewport.Width != vp.Width) || (_lastViewport.Height != vp.Height))
+            {
+                _projection = float4x4.Identity;
+                // Normal 3D cameras look into the -z direction (z = 1 is in front of z = 0). The
+                // sprite batch layer depth is the opposite (z = 0 is in front of z = 1).
+                // --> We get the correct matrix with near plane 0 and far plane -1.
+                _projection = float4x4.Ortho(0, vp.Width, vp.Height, 0, 0, -1);
+                //Matrix.CreateOrthographicOffCenter(0, vp.Width, vp.Height, 0, 0, -1, out var projection);
+                _projection[10] = 1f;
+                _projection[14] = 0f;
+
+                // Some platforms require a half pixel offset to match DX.
+                //if (NeedsHalfPixelOffset)
+                // {
+                //     _projection.M41 += -0.5f * _projection.M11;
+                //     _projection.M42 += -0.5f * _projection.M22;
+                // }
+
+                _defaultEffect.World = Matrix.Identity;
+                _defaultEffect.Projection = Convert4x4(_projection);
+                _defaultEffect.View = Matrix.Identity;
+
+                _lastViewport = vp;
+
+            }
+        }
+
         protected override void OnUnmanagedDispose()
         {
+            _defaultEffect.Dispose();
             _blendStates.Clear();
             _depthStates.Clear();
             _rasterizerStates.Clear();

@@ -133,9 +133,16 @@
                     if (autoReg != null)
                     {
                         if (autoReg.Singleton)
-                            container.RegisterInstance(i, _engineContainer.GetInstance(type));
+                        {
+                            var singleton = _engineContainer.GetInstance(i);
+                            container.RegisterInstance(i, singleton);
+                            Console.WriteLine($"Passing singleton [{i}] -> [{type}] ");
+                        }
                         else
+                        {
                             container.Register(i, type);
+                            Console.WriteLine($"Passing transient [{i}] -> [{type}] ");
+                        }
                     }
                 }
 
@@ -143,9 +150,16 @@
                 if (typeReg != null)
                 {
                     if (typeReg.Singleton)
-                        container.RegisterInstance(type, _engineContainer.GetInstance(type));
+                    {
+                        var singleton = _engineContainer.GetInstance(type);
+                        container.RegisterInstance(type, singleton);
+                        Console.WriteLine($"Passing singleton [{type}] ");
+                    }
                     else
+                    {
                         container.Register(type, type);
+                        Console.WriteLine($"Passing transient [{type}] ");
+                    }
                 }
             }
 
@@ -182,9 +196,15 @@
                     if (autoReg != null)
                     {
                         if (autoReg.Singleton)
+                        {
                             _engineContainer.RegisterSingleton(i, type);
+                            Console.WriteLine($"Registering singleton [{i}] -> [{type}]");
+                        }
                         else
+                        {
                             _engineContainer.Register(i, type);
+                            Console.WriteLine($"Registering transient [{i}] -> [{type}]");
+                        }
                     }
                 }
 
@@ -192,13 +212,24 @@
                 if (typeReg != null)
                 {
                     if (typeReg.Singleton)
+                    {
                         _engineContainer.RegisterSingleton(type, type);
+                        Console.WriteLine($"Registering singleton [{type}]");
+
+                    }
                     else
-                        _engineContainer.Register(type, type, Lifestyle.Transient);
+                    {
+                        _engineContainer.Register(type, type);
+                        Console.WriteLine($"Registering transient [{type}]");
+                    }
                 }
             }
 
             _engineContainer.Verify();
+
+            var textures = _engineContainer.GetInstance<ITextureManager>();
+            var texture = textures.CreateTexture("default", 1, 1);
+            texture.SetData(new Color[1] { Color.Magenta });
 
             _geeReloadTask = Task.Run(() => CheckGEE());
             base.Initialize();
@@ -220,8 +251,8 @@
             if (disposing)
             {
                 Prefabs.Dispose();
-                Animations.Dispose();
-                Sprites.Dispose();
+                //Animations.Dispose();
+                //Sprites.Dispose();
 
                 _entities.Dispose();
                 _memory.Dispose();
@@ -236,8 +267,8 @@
             //DI.RegisterInstance(Sprites);
             //DI.RegisterInstance(Animations);
             //DI.RegisterInstance(Prefabs);
-            Sprites.Init();
-            Animations.Init();
+            //Sprites.Init();
+            //Animations.Init();
             Prefabs.Init();
 
             CreateWalls();
@@ -253,7 +284,7 @@
                 var wallSpec = EntitySpec.Create<Position, Sprite, Color, Solid, Scale>();
 
                 var wall2 = _entities.Create(wallSpec);
-                _entities.Replace(wall2, new Sprite(1, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
+                _entities.Replace(wall2, new Sprite(0, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
                 _entities.Replace(wall2, new Scale(1, 1));
                 _entities.Replace(wall2, new Position(0, 0));
                 _entities.Replace(wall2, Color.Green);
@@ -286,9 +317,9 @@
             _entities.Replace(player, new PlayerInput());
             _entities.Replace(player, new Move() { Friction = new float2(0.85f), Acceleration = new float2(2000), Speed = float2.Zero });
             _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
-            _entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginX = 0.5f, OriginY = 1f });
+            //_entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginX = 0.5f, OriginY = 1f });
             _entities.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromRect(new float2(16, 48), new float2(32, 48)) });
-            _entities.Replace(player, FromTexture(Sprites.Player, 16, 24, 0, 2));
+            //_entities.Replace(player, FromTexture(Sprites.Player, 16, 24, 0, 2));
             _entities.Replace(player, Gravity.Default);
             return player;
         }

@@ -10,11 +10,13 @@ namespace Game.Engine.Managers
     {
         protected class Texture2DInternal : UnmanagedDispose, ITexture2D
         {
+            private GraphicsDevice _device;
             private Texture2D _texture;
 
-            public Texture2DInternal(uint id, Texture2D texture)
+            public Texture2DInternal(uint id, GraphicsDevice device, Texture2D texture)
             {
                 ID = id;
+                _device = device;
                 _texture = texture;
             }
 
@@ -27,6 +29,11 @@ namespace Game.Engine.Managers
             public void GetData<T>(T[] data) where T : struct => _texture.GetData<T>(data);
 
             public void SetData<T>(T[] data) where T : struct => _texture.SetData<T>(data);
+
+            public void Bind()
+            {
+                _device.Textures[0] = _texture;
+            }
 
             protected override void OnManagedDispose()
             {
@@ -45,7 +52,7 @@ namespace Game.Engine.Managers
         protected override ITexture2D CreateTextureInternal(uint id, int width, int height)
         {
             var texture = new Texture2D(_device, width, height);
-            return new Texture2DInternal(id, texture);
+            return new Texture2DInternal(id, _device, texture);
         }
 
         protected override ITexture2D LoadFromFileInternal(uint id, string loadFile)
@@ -53,7 +60,7 @@ namespace Game.Engine.Managers
             using (var fs = File.OpenRead(loadFile))
             {
                 var texture = Texture2D.FromStream(_device, fs);
-                return new Texture2DInternal(id, texture);
+                return new Texture2DInternal(id, _device, texture);
             }
         }
     }
