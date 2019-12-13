@@ -126,6 +126,7 @@
             {
                 _gee?.Dispose();
                 _gee = _geeReloadTask.Result;
+                GC.GetTotalMemory(true);
                 _geeReloadTask = Task.Run(() => CheckGEE());
             }
         }
