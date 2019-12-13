@@ -34,7 +34,7 @@
     public class Engine : Game
     {
 
-        public const int TILE_SIZE = 32;
+        public const int TILE_SIZE = 4;
 
         private static Engine _instance;
         public static Engine Instance => _instance;
@@ -258,22 +258,24 @@
                 _entities.Replace(wall2, new Position(0, 0));
                 _entities.Replace(wall2, Color.Green);
 
-                // string line = null;
-                // var y = 0;
-                // while ((line = sr.ReadLine()) != null)
-                // {
-                //     for (var x = 0; x < line.Length; x++)
-                //     {
-                //         if (line[x] == '1')
-                //         {
-                //             var wall = _entities.Create(wallSpec);
-                //             _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
-                //             _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
-                //             _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
-                //         }
-                //     }
-                //     y++;
-                // }
+                string line = null;
+                var y = 0;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    for (var x = 0; x < line.Length; x++)
+                    {
+                        if (line[x] == '1')
+                        {
+                            var wall = _entities.Create(wallSpec);
+                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
+                            _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
+                            _entities.Replace(wall, new Scale(1, 1));
+                            _entities.Replace(wall, Color.White);
+                            _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
+                        }
+                    }
+                    y++;
+                }
             }
         }
 

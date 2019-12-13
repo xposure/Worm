@@ -1,6 +1,10 @@
 namespace Game.Engine.Managers
 {
+    using System;
+    using System.Reflection;
+    using System.Runtime.InteropServices;
     using Atma;
+    using Game.Framework;
     using Game.Framework.Managers;
     using Microsoft.Xna.Framework.Graphics;
 
@@ -42,7 +46,8 @@ namespace Game.Engine.Managers
 
             protected override void OnManagedDispose()
             {
-                _buffer.Dispose();
+                _buffer?.Dispose();
+                _buffer = null;
             }
         }
 
@@ -81,18 +86,81 @@ namespace Game.Engine.Managers
 
             protected override void OnManagedDispose()
             {
-                _buffer.Dispose();
+                _buffer?.Dispose();
+                _buffer = null;
             }
         }
 
         public class VertexBufferInternal<T> : UnmanagedDispose, IVertexBuffer<T>
             where T : unmanaged
         {
-            public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
-                new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-                new VertexElement(8, VertexElementFormat.Color, VertexElementUsage.Color, 0),
-                new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-            );
+            private static bool IsValid => VertexDeclaration != null;
+            private static readonly Exception Exception;
+
+            public static readonly VertexDeclaration VertexDeclaration;
+            public static readonly Type VertexType;
+
+            static VertexBufferInternal()
+            {
+                try
+                {
+                    var type = typeof(T);
+                    var vertexGroup = type.GetCustomAttribute<VertexGroupAttribute>();
+                    if (vertexGroup != null)
+                        type = vertexGroup.VertexType;
+
+                    VertexType = type;
+
+                    var fields = type.GetFields();
+                    var elements = new VertexElement[fields.Length];
+                    for (var i = 0; i < elements.Length; i++)
+                    {
+                        var vertAttr = fields[i].GetCustomAttribute<VertexElementAttribute>();
+                        if (vertAttr == null)
+                            throw new Exception($"Missing VertexElementAttribute on {fields[i].Name}");
+
+                        var offset = (int)Marshal.OffsetOf(type, fields[i].Name);
+                        elements[i] = Convert(offset, vertAttr.VertexSchema);
+                    }
+
+                    VertexDeclaration = new VertexDeclaration(elements);
+                }
+                catch (Exception ex)
+                {
+                    Exception = ex;
+                }
+            }
+
+            private static VertexElement Convert(int offset, in VertexSchema schema)
+               => new VertexElement(
+                        offset, //(int)Marshal.OffsetOf(type, fields[i].Name),
+                        Convert(schema.ElementType),
+                        Convert(schema.Semantic),
+                        schema.UsageIndex);
+
+            private static VertexElementFormat Convert(VertexElementType elementType)
+            {
+                switch (elementType)
+                {
+                    case VertexElementType.Color: return VertexElementFormat.Color;
+                    case VertexElementType.Float2: return VertexElementFormat.Vector2;
+                    case VertexElementType.Float3: return VertexElementFormat.Vector3;
+                    default:
+                        throw new Exception($"Unsupported element type: {elementType}");
+                }
+            }
+
+            private static VertexElementUsage Convert(VertexSemantic semantic)
+            {
+                switch (semantic)
+                {
+                    case VertexSemantic.Color: return VertexElementUsage.Color;
+                    case VertexSemantic.Texture: return VertexElementUsage.TextureCoordinate;
+                    case VertexSemantic.Position: return VertexElementUsage.Position;
+                    default:
+                        throw new Exception($"Unsupported semantic: {semantic}");
+                }
+            }
 
             private readonly GraphicsDevice _device;
             private VertexBuffer _buffer;
@@ -102,6 +170,9 @@ namespace Game.Engine.Managers
 
             public VertexBufferInternal(uint id, int size, GraphicsDevice device, bool isDynamic)
             {
+                if (!IsValid)
+                    throw Exception;
+
                 ID = id;
                 _device = device;
                 _isDynamic = isDynamic;
@@ -127,7 +198,8 @@ namespace Game.Engine.Managers
 
             protected override void OnManagedDispose()
             {
-                _buffer.Dispose();
+                _buffer?.Dispose();
+                _buffer = null;
             }
         }
 

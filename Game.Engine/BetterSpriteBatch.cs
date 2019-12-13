@@ -13,22 +13,21 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Worm
 {
     [StructLayout(LayoutKind.Sequential, Pack = 0)]
-
     public struct SpriteVertex
     {
+        [VertexElement(VertexElementType.Float2, VertexSemantic.Position)]
         public Position Position;
-        public Color Color;
-        public TextureCoord TextureCoord;
 
-        public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
-            new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-            new VertexElement(8, VertexElementFormat.Color, VertexElementUsage.Color, 0),
-            new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0)
-        );
+        [VertexElement(VertexElementType.Color, VertexSemantic.Color)]
+        public Color Color;
+
+        [VertexElement(VertexElementType.Float2, VertexSemantic.Texture)]
+        public TextureCoord TextureCoord;
     }
 
 
     [StructLayout(LayoutKind.Sequential, Pack = 0)]
+    [VertexGroup(typeof(SpriteVertex))]
     public struct GpuSprite
     {
         public SpriteVertex TL;
@@ -36,7 +35,6 @@ namespace Worm
         public SpriteVertex BL;
         public SpriteVertex BR;
 
-        //public void Update(in Vector2 position, in Vector2 scale, )
     }
 
     public readonly ref struct BulkSrpiteOperation
