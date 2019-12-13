@@ -11,7 +11,7 @@ namespace Game.Logic.Modules.Physics
         [Has(typeof(Sprite))]
         public void Execute(in Position position, ref Scale scale)
         {
-            var t = (sin % 1);
+            var t = (sin % 2) - 1;
             scale.Width = t * t * 2 + 1;
             scale.Height = t * t * t * 2 + 1;
 
