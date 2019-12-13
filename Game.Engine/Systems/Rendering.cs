@@ -13,6 +13,7 @@ namespace Worm.Systems
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
     using Worm.Managers;
+    using Color = global::Color;
 
     [Stages(nameof(RenderStage))]
     public class SpriteRenderer : SystemBase
