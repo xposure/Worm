@@ -45,10 +45,15 @@ namespace Worm.Systems
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
+        public SpriteRenderer(DrawContextFactory drawContextFactory)
+        {
+            _spriteBatch = drawContextFactory.CreateDrawContext();
+        }
+
         protected override void OnUnmanagedDispose()
         {
             //_debugLines.Dispose();
-            _spriteBatch.Dispose();
+            //_spriteBatch.Dispose();
             _renderOrder.Clear();
         }
 
@@ -63,7 +68,7 @@ namespace Worm.Systems
 
         protected override void OnInit()
         {
-            _spriteBatch = new BetterSpriteBatch(Engine.Instance.Memory, Engine.Instance.GraphicsDevice);
+            //_spriteBatch = new BetterSpriteBatch(Engine.Instance.Memory, Engine.Instance.GraphicsDevice);
             _renderSpec = EntitySpec.Create<Position, Sprite>();
             _renderSort = new Comparison<EntityChunkList>((x, y) =>
                             x.Specification.GetGroupData<RenderLayer>().Layer -

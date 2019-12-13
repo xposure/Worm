@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using Atma;
 using Atma.Common;
 using Atma.Memory;
+using Game.Framework;
+using Game.Framework.Managers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -54,6 +56,20 @@ namespace Worm
         }
     }
 
+    [AutoRegister(true)]
+    public class DrawContextFactory
+    {
+        private readonly IGraphicsBufferFactory _bufferFactory;
+        private readonly RenderCommandFactory _renderCommandFactory;
+        public DrawContextFactory(IGraphicsBufferFactory bufferFactory, RenderCommandFactory renderCommandFactory)
+        {
+            _bufferFactory = bufferFactory;
+            _renderCommandFactory = renderCommandFactory;
+        }
+
+        public BetterSpriteBatch CreateDrawContext() => new BetterSpriteBatch(_bufferFactory, _renderCommandFactory.Create());
+    }
+
     public class BetterSpriteBatch : UnmanagedDispose
     {
 
@@ -80,6 +96,7 @@ namespace Worm
             }
         }
 
+        private IGraphicsBufferFactory _bufferFactory;
 
         private RenderCommandBuffer _renderCommands;
         private BasicEffect _defaultEffect;
@@ -94,17 +111,17 @@ namespace Worm
 
         private Texture2D _currentTexture = null;
 
-        private IndexBuffer _indexBuffer;
+        private IIndexBuffer16 _indexBuffer;
 
         private int _primitiveCount = 0;
         //private int _vertexPosition = 0;
         private GpuSprite[] _sprites;
         private int _spriteIndex = 0;
-        private DynamicVertexBuffer _vertexBuffer;
-        private ObjectPool<DynamicVertexBuffer> _bufferPool;
-        private List<DynamicVertexBuffer> _usedBuffers0 = new List<DynamicVertexBuffer>();
-        private List<DynamicVertexBuffer> _usedBuffers1 = new List<DynamicVertexBuffer>();
-        private List<VertexBuffer> _allBuffers = new List<VertexBuffer>();
+        private IVertexBuffer<GpuSprite> _vertexBuffer;
+        private ObjectPool<IVertexBuffer<GpuSprite>> _bufferPool;
+        private List<IVertexBuffer<GpuSprite>> _usedBuffers0 = new List<IVertexBuffer<GpuSprite>>();
+        private List<IVertexBuffer<GpuSprite>> _usedBuffers1 = new List<IVertexBuffer<GpuSprite>>();
+        private List<IVertexBuffer<GpuSprite>> _allBuffers = new List<IVertexBuffer<GpuSprite>>();
         private bool _isInBulkOperation = false;
 
         private Viewport _lastViewport = new Viewport();
@@ -113,27 +130,33 @@ namespace Worm
         public int Triangles => _renderCommands.Triangles;
         public int Commands => _renderCommands.Commands;
 
-        public BetterSpriteBatch(IAllocator allocator, GraphicsDevice device)
+        public BetterSpriteBatch(IGraphicsBufferFactory bufferFactory, RenderCommandBuffer renderCommands)
         {
-            _bufferPool = new ObjectPool<DynamicVertexBuffer>(() =>
+            _bufferFactory = bufferFactory;
+            _renderCommands = renderCommands;
+            _device = _renderCommands.GraphicsDevice;
+
+            _bufferPool = new ObjectPool<IVertexBuffer<GpuSprite>>(() =>
             {
-                var buffer = new DynamicVertexBuffer(device, SpriteVertex.VertexDeclaration, MAX_SPRITES * 4, BufferUsage.WriteOnly);
+                var buffer = _bufferFactory.CreateVertex<GpuSprite>(MAX_SPRITES * 4, true);
+                //var buffer = new DynamicVertexBuffer(_device, SpriteVertex.VertexDeclaration, MAX_SPRITES * 4, BufferUsage.WriteOnly);
                 _allBuffers.Add(buffer);
                 return buffer;
             });
             _sprites = new GpuSprite[MAX_SPRITES];
-            _renderCommands = new RenderCommandBuffer(allocator);
-            _device = device;
+            _renderCommands = renderCommands;
 
-            _defaultEffect = new BasicEffect(device);
+            _defaultEffect = new BasicEffect(_device);
             _defaultEffect.TextureEnabled = true;
             _defaultEffect.VertexColorEnabled = true;
 
-            _defaultTexture = new Texture2D(device, 1, 1);
+            _defaultTexture = new Texture2D(_device, 1, 1);
             _defaultTexture.SetData(new[] { Color.White });
 
-            _indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, IndexData.Length, BufferUsage.None);
+            _indexBuffer = _bufferFactory.CreateIndex16(IndexData.Length, false);
             _indexBuffer.SetData(IndexData);
+            //_indexBuffer = new IndexBuffer(_device, IndexElementSize.SixteenBits, IndexData.Length, BufferUsage.None);
+            //_indexBuffer.SetData(IndexData);
 
             for (var i = 0; i < MAX_SPRITES; ++i)
             {
@@ -229,115 +252,115 @@ namespace Worm
             _renderCommands.SetEffect(effect);
         }
 
-        //MonoGame draw method
-        public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
-            => MonoGameDraw(texture, position, sourceRectangle, color, rotation, origin, new Vector2(scale, scale), effects, layerDepth);
+        // //MonoGame draw method
+        // public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
+        //     => MonoGameDraw(texture, position, sourceRectangle, color, rotation, origin, new Vector2(scale, scale), effects, layerDepth);
 
-        public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
-        {
-            SetTexture(texture);
+        // public void MonoGameDraw(Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
+        // {
+        //     SetTexture(texture);
 
-            origin = origin * scale;
-            TextureRegion _texCoord = new TextureRegion(0, 0, 1, 1);
+        //     origin = origin * scale;
+        //     TextureRegion _texCoord = new TextureRegion(0, 0, 1, 1);
 
 
-            var texelWidth = 1f / texture.Width;
-            var texelHeight = 1f / texture.Height;
-            float w, h;
-            if (sourceRectangle.HasValue)
-            {
-                var srcRect = sourceRectangle.GetValueOrDefault();
-                w = srcRect.Width * scale.X;
-                h = srcRect.Height * scale.Y;
-                _texCoord.X0 = srcRect.X * texelWidth;
-                _texCoord.Y0 = srcRect.Y * texelHeight;
-                _texCoord.X1 = (srcRect.X + srcRect.Width) * texelWidth;
-                _texCoord.Y1 = (srcRect.Y + srcRect.Height) * texelHeight;
-            }
-            else
-            {
-                w = texture.Width * scale.X;
-                h = texture.Height * scale.Y;
-                // _texCoord.X0 = 0;
-                // _texCoord.Y0 = 0;
-                // _texCoord.X1 = 1;
-                // _texCoord.Y1 = 1;
-            }
+        //     var texelWidth = 1f / texture.Width;
+        //     var texelHeight = 1f / texture.Height;
+        //     float w, h;
+        //     if (sourceRectangle.HasValue)
+        //     {
+        //         var srcRect = sourceRectangle.GetValueOrDefault();
+        //         w = srcRect.Width * scale.X;
+        //         h = srcRect.Height * scale.Y;
+        //         _texCoord.X0 = srcRect.X * texelWidth;
+        //         _texCoord.Y0 = srcRect.Y * texelHeight;
+        //         _texCoord.X1 = (srcRect.X + srcRect.Width) * texelWidth;
+        //         _texCoord.Y1 = (srcRect.Y + srcRect.Height) * texelHeight;
+        //     }
+        //     else
+        //     {
+        //         w = texture.Width * scale.X;
+        //         h = texture.Height * scale.Y;
+        //         // _texCoord.X0 = 0;
+        //         // _texCoord.Y0 = 0;
+        //         // _texCoord.X1 = 1;
+        //         // _texCoord.Y1 = 1;
+        //     }
 
-            if ((effects & SpriteEffects.FlipVertically) != 0)
-            {
-                var temp = _texCoord.Y1;
-                _texCoord.Y1 = _texCoord.Y0;
-                _texCoord.Y0 = temp;
-            }
-            if ((effects & SpriteEffects.FlipHorizontally) != 0)
-            {
-                var temp = _texCoord.X1;
-                _texCoord.X1 = _texCoord.X0;
-                _texCoord.X0 = temp;
-            }
+        //     if ((effects & SpriteEffects.FlipVertically) != 0)
+        //     {
+        //         var temp = _texCoord.Y1;
+        //         _texCoord.Y1 = _texCoord.Y0;
+        //         _texCoord.Y0 = temp;
+        //     }
+        //     if ((effects & SpriteEffects.FlipHorizontally) != 0)
+        //     {
+        //         var temp = _texCoord.X1;
+        //         _texCoord.X1 = _texCoord.X0;
+        //         _texCoord.X0 = temp;
+        //     }
 
-            if (rotation == 0f)
-            {
-                var p = new Position(position.X - origin.X, position.Y - origin.Y);
-                var s = new Scale(w, h);
-                AddSprite(texture, p, s, color, _texCoord);
-            }
-            else
-            {
-                MonoGameAddSprite(texture,
-                        position.X,
-                        position.Y,
-                        -origin.X,
-                        -origin.Y,
-                        w,
-                        h,
-                        (float)Math.Sin(rotation),
-                        (float)Math.Cos(rotation),
-                        color,
-                        new Vector2(_texCoord.X0, _texCoord.Y0),
-                        new Vector2(_texCoord.X1, _texCoord.Y1),
-                        layerDepth);
-            }
+        //     if (rotation == 0f)
+        //     {
+        //         var p = new Position(position.X - origin.X, position.Y - origin.Y);
+        //         var s = new Scale(w, h);
+        //         AddSprite(texture, p, s, color, _texCoord);
+        //     }
+        //     else
+        //     {
+        //         MonoGameAddSprite(texture,
+        //                 position.X,
+        //                 position.Y,
+        //                 -origin.X,
+        //                 -origin.Y,
+        //                 w,
+        //                 h,
+        //                 (float)Math.Sin(rotation),
+        //                 (float)Math.Cos(rotation),
+        //                 color,
+        //                 new Vector2(_texCoord.X0, _texCoord.Y0),
+        //                 new Vector2(_texCoord.X1, _texCoord.Y1),
+        //                 layerDepth);
+        //     }
 
-        }
+        // }
 
-        public void MonoGameAddSprite(Texture2D texture, float x, float y, float dx, float dy, float w, float h, float sin, float cos, Color color, Vector2 texCoordTL, Vector2 texCoordBR, float depth)
-        {
-            Assert.EqualTo(_isInBulkOperation, false);
-            SetTexture(texture);
+        // public void MonoGameAddSprite(Texture2D texture, float x, float y, float dx, float dy, float w, float h, float sin, float cos, Color color, Vector2 texCoordTL, Vector2 texCoordBR, float depth)
+        // {
+        //     Assert.EqualTo(_isInBulkOperation, false);
+        //     SetTexture(texture);
 
-            ref var sprite = ref _sprites[_spriteIndex++];
+        //     ref var sprite = ref _sprites[_spriteIndex++];
 
-            sprite.TL.Position.X = x + dx * cos - dy * sin;
-            sprite.TL.Position.Y = y + dx * sin + dy * cos;
-            sprite.TL.Color = color;
-            sprite.TL.TextureCoord.X = texCoordTL.X;
-            sprite.TL.TextureCoord.Y = texCoordTL.Y;
+        //     sprite.TL.Position.X = x + dx * cos - dy * sin;
+        //     sprite.TL.Position.Y = y + dx * sin + dy * cos;
+        //     sprite.TL.Color = color;
+        //     sprite.TL.TextureCoord.X = texCoordTL.X;
+        //     sprite.TL.TextureCoord.Y = texCoordTL.Y;
 
-            sprite.TR.Position.X = x + (dx + w) * cos - dy * sin;
-            sprite.TR.Position.Y = y + (dx + w) * sin + dy * cos;
-            sprite.TR.Color = color;
-            sprite.TR.TextureCoord.X = texCoordBR.X;
-            sprite.TR.TextureCoord.Y = texCoordTL.Y;
+        //     sprite.TR.Position.X = x + (dx + w) * cos - dy * sin;
+        //     sprite.TR.Position.Y = y + (dx + w) * sin + dy * cos;
+        //     sprite.TR.Color = color;
+        //     sprite.TR.TextureCoord.X = texCoordBR.X;
+        //     sprite.TR.TextureCoord.Y = texCoordTL.Y;
 
-            sprite.BL.Position.X = x + dx * cos - (dy + h) * sin;
-            sprite.BL.Position.Y = y + dx * sin + (dy + h) * cos;
-            sprite.BL.Color = color;
-            sprite.BL.TextureCoord.X = texCoordTL.X;
-            sprite.BL.TextureCoord.Y = texCoordBR.Y;
+        //     sprite.BL.Position.X = x + dx * cos - (dy + h) * sin;
+        //     sprite.BL.Position.Y = y + dx * sin + (dy + h) * cos;
+        //     sprite.BL.Color = color;
+        //     sprite.BL.TextureCoord.X = texCoordTL.X;
+        //     sprite.BL.TextureCoord.Y = texCoordBR.Y;
 
-            sprite.BR.Position.X = x + (dx + w) * cos - (dy + h) * sin;
-            sprite.BR.Position.Y = y + (dx + w) * sin + (dy + h) * cos;
-            sprite.BR.Color = color;
-            sprite.BR.TextureCoord.X = texCoordBR.X;
-            sprite.BR.TextureCoord.Y = texCoordBR.Y;
+        //     sprite.BR.Position.X = x + (dx + w) * cos - (dy + h) * sin;
+        //     sprite.BR.Position.Y = y + (dx + w) * sin + (dy + h) * cos;
+        //     sprite.BR.Color = color;
+        //     sprite.BR.TextureCoord.X = texCoordBR.X;
+        //     sprite.BR.TextureCoord.Y = texCoordBR.Y;
 
-            _primitiveCount += 2;
+        //     _primitiveCount += 2;
 
-            if (_spriteIndex == MAX_SPRITES)
-                CompleteBuffer();
-        }
+        //     if (_spriteIndex == MAX_SPRITES)
+        //         CompleteBuffer();
+        // }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSprite(in Position position, in Scale scale, in Color color, in TextureRegion texCoord)
@@ -420,7 +443,7 @@ namespace Worm
 
             if (_spriteIndex > 0)
             {
-                _vertexBuffer.SetData(_sprites, 0, _spriteIndex, SetDataOptions.Discard);//, 0, _vertexPosition, SetDataOptions.Discard);
+                _vertexBuffer.SetData(_sprites, 0, _spriteIndex);//, 0, _vertexPosition, SetDataOptions.Discard);
                 _spriteIndex = 0;
             }
 
@@ -433,7 +456,7 @@ namespace Worm
             Assert.EqualTo(_isInBulkOperation, false);
             UpdateProjection();
             CompleteBuffer(true);
-            _renderCommands.Render(_device);
+            _renderCommands.Render();
             Reset();
         }
 

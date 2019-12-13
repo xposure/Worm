@@ -59,6 +59,8 @@ namespace Game.Framework
             foreach (var it in _systemProducers)
                 _container.Collection.Append(typeof(SystemProducer), it, Lifestyle.Singleton);
 
+            _container.Verify();
+
             _systems = _container.GetInstance<SystemManager>();
             _systems.DefaultStage = nameof(UpdateStage);
             _systems.AddStage(nameof(UpdateStage));

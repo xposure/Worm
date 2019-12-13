@@ -3,8 +3,25 @@ namespace Worm
     using System.Collections.Generic;
     using Atma;
     using Atma.Memory;
+    using Game.Framework;
+    using Game.Framework.Managers;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
+
+    [AutoRegister(true)]
+    public class RenderCommandFactory
+    {
+        private readonly IAllocator _memory;
+        private readonly GraphicsDevice _device;
+
+        public RenderCommandFactory(IAllocator memory, GraphicsDevice device)
+        {
+            _memory = memory;
+            _device = device;
+        }
+
+        public RenderCommandBuffer Create() => new RenderCommandBuffer(_memory, _device);
+    }
 
     public unsafe class RenderCommandBuffer : UnmanagedDispose
     {
@@ -107,10 +124,14 @@ namespace Worm
         public int Triangles { get; private set; }
 
         private NativeBuffer _buffer;
+        private readonly GraphicsDevice _device;
 
-        public RenderCommandBuffer(IAllocator allocator, int sizeInBytes = 65536)
+        public GraphicsDevice GraphicsDevice => _device;
+
+        public RenderCommandBuffer(IAllocator allocator, GraphicsDevice device)
         {
-            _buffer = new NativeBuffer(allocator, sizeInBytes);
+            _buffer = new NativeBuffer(allocator);
+            _device = device;
         }
 
         private List<BlendState> _blendStates = new List<BlendState>();
@@ -161,16 +182,16 @@ namespace Worm
             _buffer.Add(new GraphicsStateChange(CommandTypes.Effect, index));
         }
 
-        private List<IndexBuffer> _indicies = new List<IndexBuffer>();
-        public void SetIndexBuffer(IndexBuffer indicies)
+        private List<IIndexBuffer> _indicies = new List<IIndexBuffer>();
+        public void SetIndexBuffer(IIndexBuffer indicies)
         {
             var index = _indicies.Count;
             _indicies.Add(indicies);
             _buffer.Add(new GraphicsStateChange(CommandTypes.IndexBuffer, index));
         }
 
-        private List<VertexBuffer> _vertices = new List<VertexBuffer>();
-        public void SetVertexBuffer(VertexBuffer vertices)
+        private List<IVertexBuffer> _vertices = new List<IVertexBuffer>();
+        public void SetVertexBuffer(IVertexBuffer vertices)
         {
             var index = _vertices.Count;
             _vertices.Add(vertices);
@@ -188,7 +209,7 @@ namespace Worm
         }
 
 
-        public void Render(GraphicsDevice device)
+        public void Render()
         {
             Commands = 0;
             Triangles = 0;
@@ -203,25 +224,25 @@ namespace Worm
                     case CommandTypes.Blend:
                         {
                             var it = _blendStates[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.BlendState = it;
+                            _device.BlendState = it;
                             break;
                         }
                     case CommandTypes.Depth:
                         {
                             var it = _depthStates[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.DepthStencilState = it;
+                            _device.DepthStencilState = it;
                             break;
                         }
                     case CommandTypes.Rasterizer:
                         {
                             var it = _rasterizerStates[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.RasterizerState = it;
+                            _device.RasterizerState = it;
                             break;
                         }
                     case CommandTypes.Sampler:
                         {
                             var it = _samplerStates[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.SamplerStates[0] = it;
+                            _device.SamplerStates[0] = it;
                             break;
                         }
                     case CommandTypes.Effect:
@@ -232,7 +253,7 @@ namespace Worm
                     case CommandTypes.Texture:
                         {
                             var tex = _textures[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.Textures[0] = tex;
+                            _device.Textures[0] = tex;
                             if (currentEffect is BasicEffect basic && tex is Texture2D tex2d)
                                 basic.Texture = tex2d;
 
@@ -240,14 +261,12 @@ namespace Worm
                         }
                     case CommandTypes.VertexBuffer:
                         {
-                            var it = _vertices[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.SetVertexBuffer(it);
+                            _vertices[((GraphicsStateChange*)cmd)->StateIndex].Bind();
                             break;
                         }
                     case CommandTypes.IndexBuffer:
                         {
-                            var it = _indicies[((GraphicsStateChange*)cmd)->StateIndex];
-                            device.Indices = it;
+                            _indicies[((GraphicsStateChange*)cmd)->StateIndex].Bind();
                             break;
                         }
                     case CommandTypes.Camera:
@@ -275,13 +294,13 @@ namespace Worm
                                 {
                                     pass.Apply();
                                     Triangles += renderOp->PrimitiveCount;
-                                    device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
+                                    _device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
                                 }
                             }
                             else
                             {
                                 Triangles += renderOp->PrimitiveCount;
-                                device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
+                                _device.DrawIndexedPrimitives(PrimitiveType.TriangleList, renderOp->StartIndex, 0, renderOp->PrimitiveCount);
                             }
                             break;
                         }

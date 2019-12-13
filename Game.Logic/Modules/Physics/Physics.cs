@@ -12,8 +12,8 @@ namespace Game.Logic.Modules.Physics
         public void Execute(in Position position, ref Scale scale)
         {
             var t = (sin % 2) - 1;
-            scale.Width = t * t * 2 + 1;
-            scale.Height = t * t * t * 2 + 1;
+            //scale.Width = t * t * 2 + 1;
+            //scale.Height = t * t * t * 2 + 1;
 
 
             //position.X -= 0.1f;
@@ -25,8 +25,8 @@ namespace Game.Logic.Modules.Physics
         {
             sin += 0.016f;
 
-            position.X = (float)System.Math.Cos(sin) * 100;
-            position.Y = (float)System.Math.Sin(sin) * 100;
+            //position.X = (float)System.Math.Cos(sin) * 100;
+            //position.Y = (float)System.Math.Sin(sin) * 100;
 
 
             //position.X -= 0.1f;

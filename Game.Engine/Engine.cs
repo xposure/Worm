@@ -26,6 +26,10 @@
     using SimpleInjector;
 
     using Game.Framework;
+    using Game.Framework.Managers;
+    using Game.Engine.Managers;
+    using System.Reflection;
+    using System.Linq;
 
     public class Engine : Game
     {
@@ -39,12 +43,12 @@
 
         private readonly ILoggerFactory _logFactory;
         private ILogger _logger;
-        private readonly EntityManager _entities;
+        private EntityManager _entities;
         public EntityManager Entities => _entities;
 
         //private SystemManager
 
-        private readonly IAllocator _memory;
+        private IAllocator _memory;
         public IAllocator Memory => _memory;
 
         private Stopwatch updateTimer = new Stopwatch();
@@ -54,6 +58,8 @@
         private AvgValue _renderAvg = new AvgValue(0.9f, 1f);
 
         private Task<GameExecutionEngine> _geeReloadTask;
+
+        private Container _engineContainer = new Container();
 
         private GameExecutionEngine _gee;
         private bool _isRunning = true;
@@ -68,8 +74,6 @@
             _logFactory = LoggerFactory.Create(builder => { builder.AddConsole(configure => { }); });
             _logger = _logFactory.CreateLogger<Engine>();
 
-            _memory = new HeapAllocator(_logFactory);
-            _entities = new EntityManager(_logFactory, _memory);
 
         }
 
@@ -111,11 +115,91 @@
 
             container.Collection.Append(typeof(ISystem), typeof(SpriteRenderer), Lifestyle.Singleton);
 
+            //we are not properly registering our factories
+
+            var asm = Assembly.GetExecutingAssembly();
+            var types = from type in asm.GetExportedTypes()
+                        select type;
+
+            foreach (var type in types)
+            {
+                var interfaces = type.GetInterfaces();
+                foreach (var i in interfaces)
+                {
+                    if (i == typeof(IDisposable))
+                        continue;
+
+                    var autoReg = i.GetCustomAttribute<AutoRegisterAttribute>(true);
+                    if (autoReg != null)
+                    {
+                        if (autoReg.Singleton)
+                            container.RegisterInstance(i, _engineContainer.GetInstance(type));
+                        else
+                            container.Register(i, type);
+                    }
+                }
+
+                var typeReg = type.GetCustomAttribute<AutoRegisterAttribute>();
+                if (typeReg != null)
+                {
+                    if (typeReg.Singleton)
+                        container.RegisterInstance(type, _engineContainer.GetInstance(type));
+                    else
+                        container.Register(type, type);
+                }
+            }
+
             return container;
         }
 
         protected override void Initialize()
         {
+            _memory = new HeapAllocator(_logFactory).ThreadSafe;
+            _entities = new EntityManager(_logFactory, _memory);
+
+            _engineContainer.RegisterInstance(this);
+            _engineContainer.RegisterInstance(GraphicsDevice);
+            _engineContainer.RegisterInstance(graphics);
+
+            _engineContainer.RegisterInstance<ILoggerFactory>(_logFactory);
+            _engineContainer.Register(typeof(ILogger<>), typeof(Logger<>));
+            _engineContainer.RegisterInstance(typeof(IAllocator), _memory);
+            _engineContainer.RegisterInstance(_entities);
+
+            var asm = Assembly.GetExecutingAssembly();
+            var types = from type in asm.GetExportedTypes()
+                        select type;
+
+            foreach (var type in types)
+            {
+                var interfaces = type.GetInterfaces();
+                foreach (var i in interfaces)
+                {
+                    if (i == typeof(IDisposable))
+                        continue;
+
+                    var autoReg = i.GetCustomAttribute<AutoRegisterAttribute>(true);
+                    if (autoReg != null)
+                    {
+                        if (autoReg.Singleton)
+                            _engineContainer.RegisterSingleton(i, type);
+                        else
+                            _engineContainer.Register(i, type);
+                    }
+                }
+
+                var typeReg = type.GetCustomAttribute<AutoRegisterAttribute>();
+                if (typeReg != null)
+                {
+                    if (typeReg.Singleton)
+                        _engineContainer.RegisterSingleton(type, type);
+                    else
+                        _engineContainer.Register(type, type, Lifestyle.Transient);
+                }
+            }
+
+            _engineContainer.Verify();
+
             _geeReloadTask = Task.Run(() => CheckGEE());
             base.Initialize();
         }
@@ -249,11 +333,18 @@
             base.Draw(gameTime);
 
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            GraphicsDevice.Clear(new Color(50, 50, 50, 255));
 
             renderTimer.Restart();
 
-            _gee?.Draw(dt);
+            if (_gee != null)
+            {
+                GraphicsDevice.Clear(new Color(50, 50, 50, 255));
+                _gee.Draw(dt);
+            }
+            else
+            {
+                GraphicsDevice.Clear(new Color(255, 50, 50, 255));
+            }
 
             renderTimer.Stop();
             _renderAvg += renderTimer;
