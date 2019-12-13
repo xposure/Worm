@@ -63,10 +63,10 @@ namespace Game.Framework.Managers
 
     public readonly ref struct BulkSrpiteOperation
     {
-        private readonly BetterSpriteBatch _batch;
+        private readonly DrawContext _batch;
         public readonly Span<GpuSprite> Sprites;
 
-        public BulkSrpiteOperation(BetterSpriteBatch batch, Span<GpuSprite> sprites)
+        public BulkSrpiteOperation(DrawContext batch, Span<GpuSprite> sprites)
         {
             _batch = batch;
             Sprites = sprites;
@@ -78,7 +78,7 @@ namespace Game.Framework.Managers
         }
     }
 
-    public class BetterSpriteBatch : UnmanagedDispose
+    public class DrawContext : UnmanagedDispose
     {
         private const int MAX_PRIMITIVES = 10922;
         private const int MAX_SPRITES = MAX_PRIMITIVES * 2;
@@ -87,7 +87,7 @@ namespace Game.Framework.Managers
 
         private readonly static ushort[] IndexData;
 
-        static BetterSpriteBatch()
+        static DrawContext()
         {
             IndexData = new ushort[MAX_INDICIES];
             var verts = 0;
@@ -126,7 +126,7 @@ namespace Game.Framework.Managers
         public int Triangles => _renderCommands.Triangles;
         public int Commands => _renderCommands.Commands;
 
-        public BetterSpriteBatch(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandBuffer renderCommands)
+        public DrawContext(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandBuffer renderCommands)
         {
             _textures = textures;
             _bufferFactory = bufferFactory;

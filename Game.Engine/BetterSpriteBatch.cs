@@ -28,7 +28,7 @@ namespace Worm
             _renderCommandFactory = renderCommandFactory;
         }
 
-        public BetterSpriteBatch CreateDrawContext() => new BetterSpriteBatch(_textures, _bufferFactory, _renderCommandFactory.Create());
+        public DrawContext CreateDrawContext() => new DrawContext(_textures, _bufferFactory, _renderCommandFactory.Create());
     }
 
 }

@@ -24,7 +24,7 @@ namespace Worm.Systems
             public Color Color;
         }
 
-        private BetterSpriteBatch _spriteBatch;
+        private DrawContext _spriteBatch;
         private ITextureManager _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
