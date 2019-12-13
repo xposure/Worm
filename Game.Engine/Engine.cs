@@ -166,10 +166,11 @@
         {
             using (var sr = File.OpenText(@"Assets\room.data"))
             {
-                var wallSpec = EntitySpec.Create<Position, Sprite, Color, Solid>();
+                var wallSpec = EntitySpec.Create<Position, Sprite, Color, Solid, Scale>();
 
                 var wall2 = _entities.Create(wallSpec);
                 _entities.Replace(wall2, new Sprite(1, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
+                _entities.Replace(wall2, new Scale(1, 1));
                 _entities.Replace(wall2, new Position(0, 0));
                 _entities.Replace(wall2, Color.Green);
 
@@ -230,6 +231,7 @@
             base.Update(gameTime);
 
             Reload();
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
