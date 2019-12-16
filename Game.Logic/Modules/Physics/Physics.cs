@@ -26,7 +26,7 @@ namespace Game.Logic.Modules.Physics
             sin += 0.016f;
 
             position.X = (float)System.Math.Cos(sin) * 100;
-            position.Y = (float)System.Math.Sin(sin) * 100;
+            //position.Y = (float)System.Math.Sin(sin) * 100;
 
 
             //position.X -= 0.1f;

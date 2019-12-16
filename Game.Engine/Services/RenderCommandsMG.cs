@@ -1,4 +1,4 @@
-namespace Game.Engine
+namespace Game.Engine.Services
 {
     using System.Collections.Generic;
     using Atma;

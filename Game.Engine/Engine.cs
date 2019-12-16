@@ -22,17 +22,20 @@
     using Microsoft.Extensions.Logging;
     //using Microsoft.Extensions.Logging.Debug;
 
-    using Worm.Managers;
     using SimpleInjector;
 
     using Game.Framework;
     using System.Reflection;
     using System.Linq;
+    using System.Threading;
 
     public class Engine : Game
     {
 
         public const int TILE_SIZE = 4;
+
+        private ManualResetEvent _reloadEvent = new ManualResetEvent(true);
+        private ManualResetEvent _requestReload = new ManualResetEvent(true);
 
         private readonly ILoggerFactory _logFactory;
         private ILogger _logger;
@@ -67,23 +70,17 @@
             });
 
             _logger = _logFactory.CreateLogger<Engine>();
-
         }
 
         private GameExecutionEngine CheckGEE()
         {
+            System.Threading.Thread.CurrentThread.Name = "Logic Hot Reload";
             while (_isRunning)
             {
                 if (_gee == null || _gee.CheckChange())
-                {
-                    System.Console.WriteLine("Reloading");
-                    var container = CreateDI();
-                    var gee = new GameExecutionEngine(container, "Game.Logic\\bin\\Game.Logic.dll");
-                    gee.Init();
-                    return gee;
-                }
+                    _requestReload.Set();
 
-                System.Threading.Thread.Sleep(100);
+                System.Threading.Thread.Sleep(10);
             }
             return null;
         }
@@ -140,12 +137,18 @@
 
         private void Reload()
         {
-            if (_geeReloadTask.IsCompletedSuccessfully)
+            if (_requestReload.WaitOne(0))
             {
+                _logger.LogDebug("Reloading logic modules.");
+
                 _gee?.Dispose();
-                _gee = _geeReloadTask.Result;
                 GC.GetTotalMemory(true);
-                _geeReloadTask = Task.Run(() => CheckGEE());
+
+                var container = CreateDI();
+                _gee = new GameExecutionEngine(container, "Game.Logic\\bin\\Game.Logic.dll");
+                _gee.Init();
+
+                _requestReload.Reset();
             }
         }
 
@@ -153,10 +156,6 @@
         {
             if (disposing)
             {
-                Prefabs.Dispose();
-                //Animations.Dispose();
-                //Sprites.Dispose();
-
                 _entities.Dispose();
                 _memory.Dispose();
             }
@@ -172,7 +171,7 @@
             //DI.RegisterInstance(Prefabs);
             //Sprites.Init();
             //Animations.Init();
-            Prefabs.Init();
+            //Prefabs.Init();
 
             CreateWalls();
             //var player = CreatePlayer();

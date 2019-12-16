@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Worm
+namespace Game.Framework
 {
     public struct AvgValue
     {

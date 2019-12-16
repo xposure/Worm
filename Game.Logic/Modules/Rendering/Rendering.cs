@@ -2,15 +2,11 @@ namespace Game.Logic.Modules.Rendering
 {
     using System;
     using System.Collections.Generic;
-    using Atma;
-    using Atma.Common;
     using Atma.Entities;
     using Atma.Math;
-    using Atma.Memory;
     using Atma.Systems;
     using Game.Framework;
     using Game.Framework.Services.Graphics;
-    using Color = global::Color;
 
     [Stages(nameof(RenderStage))]
     public class SpriteRenderer : SystemBase
@@ -49,6 +45,11 @@ namespace Game.Logic.Modules.Rendering
         {
             _textures = texture;
             _drawContext = drawContextFactory.CreateDrawContext();
+        }
+
+        protected override void OnManagedDispose()
+        {
+            _drawContext.Dispose();
         }
 
         protected override void OnUnmanagedDispose()

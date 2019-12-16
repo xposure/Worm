@@ -459,7 +459,6 @@ namespace Game.Framework.Services.Graphics
             _usedBuffers0.Clear();
             _usedBuffers1.Clear();
             _allBuffers.DisposeAll();
-            _defaultTexture.Dispose();
             _renderCommands.Dispose();
             _indexBuffer.Dispose();
         }
