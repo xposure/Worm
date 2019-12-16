@@ -18,7 +18,7 @@ namespace Game.Logic.Modules.Rendering
         }
 
         private DrawContext _drawContext;
-        private ITextureManager _textures;
+        private ITextureFactory _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
 
@@ -41,7 +41,7 @@ namespace Game.Logic.Modules.Rendering
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
-        public SpriteRenderer(ITextureManager texture, IDrawContextFactory drawContextFactory)
+        public SpriteRenderer(ITextureFactory texture, IDrawContextFactory drawContextFactory)
         {
             _textures = texture;
             _drawContext = drawContextFactory.CreateDrawContext();

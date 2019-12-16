@@ -19,7 +19,7 @@ namespace Game.Framework.Services.Graphics
     }
 
     [GameService()]
-    public interface ITextureManager : IDisposable
+    public interface ITextureFactory : IDisposable
     {
         ITexture2D LoadFromFile(string name, string loadFile);
         ITexture2D CreateTexture(string name, int width, int height);
@@ -28,7 +28,7 @@ namespace Game.Framework.Services.Graphics
 
     }
 
-    public abstract class TextureManagerBase : UnmanagedDispose, ITextureManager
+    public abstract class TextureFactoryBase : UnmanagedDispose, ITextureFactory
     {
         private Dictionary<uint, ITexture2D> _textures = new Dictionary<uint, ITexture2D>();
 
@@ -46,7 +46,7 @@ namespace Game.Framework.Services.Graphics
             }
         }
 
-        public TextureManagerBase()
+        public TextureFactoryBase()
         {
 
         }

@@ -6,7 +6,7 @@ namespace Game.Engine.Services
     using Game.Framework.Services.Graphics;
     using Microsoft.Xna.Framework.Graphics;
 
-    public class TextureManager : TextureManagerBase, IGameService
+    public class TextureFactoryMG : TextureFactoryBase, IGameService
     {
         protected class PlatformTexture2D : UnmanagedDispose, ITexture2D
         {
@@ -44,7 +44,7 @@ namespace Game.Engine.Services
 
         private GraphicsDevice _device;
 
-        public TextureManager(GraphicsDevice device)
+        public TextureFactoryMG(GraphicsDevice device)
         {
             _device = device;
         }

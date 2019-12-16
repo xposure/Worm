@@ -8,7 +8,7 @@ namespace Game.Engine.Services
     using Game.Framework.Services.Graphics;
     using Microsoft.Xna.Framework.Graphics;
 
-    public class GraphicsBufferFactory : GraphicsBufferFactoryBase
+    public class GraphicsBufferFactoryMG : GraphicsBufferFactoryBase
     {
         public class PlatformIndexBuffer16 : UnmanagedDispose, IIndexBuffer16
         {
@@ -205,7 +205,7 @@ namespace Game.Engine.Services
 
         private readonly GraphicsDevice _device;
 
-        public GraphicsBufferFactory(GraphicsDevice device)
+        public GraphicsBufferFactoryMG(GraphicsDevice device)
         {
             _device = device;
         }

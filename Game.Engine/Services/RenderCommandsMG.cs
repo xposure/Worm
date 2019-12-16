@@ -8,12 +8,12 @@ namespace Game.Engine.Services
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
 
-    public class RenderCommandFactory : Framework.Services.Graphics.IRenderCommandFactory
+    public class RenderCommandFactoryMG : Framework.Services.Graphics.IRenderCommandFactory
     {
         private readonly IAllocator _memory;
         private readonly GraphicsDevice _device;
 
-        public RenderCommandFactory(IAllocator memory, GraphicsDevice device)
+        public RenderCommandFactoryMG(IAllocator memory, GraphicsDevice device)
         {
             _memory = memory;
             _device = device;

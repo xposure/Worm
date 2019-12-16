@@ -41,10 +41,10 @@ namespace Game.Framework.Services.Graphics
 
     public class DrawContextFactory : IDrawContextFactory
     {
-        private readonly ITextureManager _textures;
+        private readonly ITextureFactory _textures;
         private readonly IGraphicsBufferFactory _bufferFactory;
         private readonly IRenderCommandFactory _renderCommandFactory;
-        public DrawContextFactory(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandFactory renderCommandFactory)
+        public DrawContextFactory(ITextureFactory textures, IGraphicsBufferFactory bufferFactory, IRenderCommandFactory renderCommandFactory)
         {
             _textures = textures;
             _bufferFactory = bufferFactory;
@@ -97,7 +97,7 @@ namespace Game.Framework.Services.Graphics
             }
         }
 
-        private ITextureManager _textures;
+        private ITextureFactory _textures;
         private IGraphicsBufferFactory _bufferFactory;
 
         private IRenderCommandBuffer _renderCommands;
@@ -120,7 +120,7 @@ namespace Game.Framework.Services.Graphics
         public int Triangles => _renderCommands.Triangles;
         public int Commands => _renderCommands.Commands;
 
-        public DrawContext(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandBuffer renderCommands)
+        public DrawContext(ITextureFactory textures, IGraphicsBufferFactory bufferFactory, IRenderCommandBuffer renderCommands)
         {
             _textures = textures;
             _bufferFactory = bufferFactory;
