@@ -1,27 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Atma;
-using Atma.Common;
-using Atma.Math;
-using Atma.Memory;
-using Game.Framework;
-using Game.Framework.Managers;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-
-namespace Worm
+namespace Game.Engine.Managers
 {
-
+    using Game.Framework;
+    using Game.Framework.Managers;
 
     [AutoRegister(true)]
-    public class DrawContextFactory
+    public class DrawContextFactory : IDrawContextFactory
     {
         private readonly ITextureManager _textures;
         private readonly IGraphicsBufferFactory _bufferFactory;
-        private readonly RenderCommandFactory _renderCommandFactory;
-        public DrawContextFactory(ITextureManager textures, IGraphicsBufferFactory bufferFactory, RenderCommandFactory renderCommandFactory)
+        private readonly IRenderCommandFactory _renderCommandFactory;
+        public DrawContextFactory(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandFactory renderCommandFactory)
         {
             _textures = textures;
             _bufferFactory = bufferFactory;

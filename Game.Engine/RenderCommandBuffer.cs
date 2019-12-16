@@ -1,4 +1,4 @@
-namespace Worm
+namespace Game.Engine
 {
     using System.Collections.Generic;
     using Atma;
@@ -9,8 +9,7 @@ namespace Worm
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
 
-    [AutoRegister(true)]
-    public class RenderCommandFactory
+    public class RenderCommandFactory : IRenderCommandFactory
     {
         private readonly IAllocator _memory;
         private readonly GraphicsDevice _device;
@@ -21,7 +20,7 @@ namespace Worm
             _device = device;
         }
 
-        public RenderCommandBuffer Create() => new RenderCommandBuffer(_memory, _device);
+        public IRenderCommandBuffer Create() => new RenderCommandBuffer(_memory, _device);
     }
 
     public unsafe class RenderCommandBuffer : UnmanagedDispose, IRenderCommandBuffer

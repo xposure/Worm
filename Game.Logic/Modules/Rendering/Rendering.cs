@@ -1,4 +1,4 @@
-namespace Worm.Systems
+namespace Game.Logic.Modules.Rendering
 {
     using System;
     using System.Collections.Generic;
@@ -10,9 +10,6 @@ namespace Worm.Systems
     using Atma.Systems;
     using Game.Framework;
     using Game.Framework.Managers;
-    using Microsoft.Xna.Framework;
-    using Microsoft.Xna.Framework.Graphics;
-    using Worm.Managers;
     using Color = global::Color;
 
     [Stages(nameof(RenderStage))]
@@ -24,7 +21,7 @@ namespace Worm.Systems
             public Color Color;
         }
 
-        private DrawContext _spriteBatch;
+        private DrawContext _drawContext;
         private ITextureManager _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
@@ -48,10 +45,10 @@ namespace Worm.Systems
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
-        public SpriteRenderer(ITextureManager texture, DrawContextFactory drawContextFactory)
+        public SpriteRenderer(ITextureManager texture, IDrawContextFactory drawContextFactory)
         {
             _textures = texture;
-            _spriteBatch = drawContextFactory.CreateDrawContext();
+            _drawContext = drawContextFactory.CreateDrawContext();
         }
 
         protected override void OnUnmanagedDispose()
@@ -91,24 +88,24 @@ namespace Worm.Systems
             var defaultColor = Color.White;
             var defaultRegion = new TextureRegion(0, 0, 1, 1);
 
-            var width = Engine.Instance.GraphicsDevice.PresentationParameters.BackBufferWidth;
-            var height = Engine.Instance.GraphicsDevice.PresentationParameters.BackBufferHeight;
+            // var width = Engine.Instance.GraphicsDevice.PresentationParameters.BackBufferWidth;
+            // var height = Engine.Instance.GraphicsDevice.PresentationParameters.BackBufferHeight;
 
             foreach (var renderGroup in _renderOrder)
             {
                 em.ForEntity((uint cameraEntity, ref Camera camera, ref Position cameraPosition) =>
                 {
-                    _spriteBatch.Reset();
+                    _drawContext.Reset();
                     //_spriteBatch.SetSamplerState(SamplerState.PointClamp);
 
                     //_spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
-                    _spriteBatch.SetCamera(float4x4.Translate(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+                    _drawContext.SetCamera(float4x4.Translate(-cameraPosition.X + (camera.Width / 2), -cameraPosition.Y + (camera.Height / 2), 0));
 
                     var currentTexture = _textures["default"];
-                    _spriteBatch.SetTexture(currentTexture);
+                    _drawContext.SetTexture(currentTexture);
 
-                    var texelWidth = _spriteBatch.TexelWidth;
-                    var texelHeight = _spriteBatch.TexelHeight;
+                    var texelWidth = _drawContext.TexelWidth;
+                    var texelHeight = _drawContext.TexelHeight;
                     var textureWidth = currentTexture.Width;
                     var textureHeight = currentTexture.Height;
 
@@ -145,9 +142,9 @@ namespace Worm.Systems
 
                                 if (currentTexture.ID != sprite.TextureID)
                                 {
-                                    _spriteBatch.SetTexture(_textures[sprite.TextureID]);
-                                    texelWidth = _spriteBatch.TexelWidth;
-                                    texelHeight = _spriteBatch.TexelHeight;
+                                    _drawContext.SetTexture(_textures[sprite.TextureID]);
+                                    texelWidth = _drawContext.TexelWidth;
+                                    texelHeight = _drawContext.TexelHeight;
                                     textureWidth = currentTexture.Width;
                                     textureHeight = currentTexture.Height;
                                 }
@@ -173,7 +170,7 @@ namespace Worm.Systems
                                     size.Height = -size.Height;
                                 }
 
-                                _spriteBatch.AddSprite(p, size, color, region);
+                                _drawContext.AddSprite(p, size, color, region);
 
                                 // //positions
                                 // if (scaleComponentIndex > -1)
@@ -230,7 +227,7 @@ namespace Worm.Systems
                         }
                     }
 
-                    _spriteBatch.Render();
+                    _drawContext.Render();
                 });
             }
 

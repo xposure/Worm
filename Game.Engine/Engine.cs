@@ -21,7 +21,6 @@
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
-    using Worm.Systems;
     using Worm.Managers;
     using SimpleInjector;
 
@@ -113,7 +112,7 @@
             container.RegisterInstance<ILoggerFactory>(_logFactory);
             container.Register(typeof(ILogger<>), typeof(Logger<>));
 
-            container.Collection.Append(typeof(ISystem), typeof(SpriteRenderer), Lifestyle.Singleton);
+            //container.Collection.Append(typeof(ISystem), typeof(SpriteRenderer), Lifestyle.Singleton);
 
             //we are not properly registering our factories
 
@@ -340,7 +339,13 @@
         {
             var cameraSpec = EntitySpec.Create<Camera, Position>();
             var camera = _entities.Create(cameraSpec);
-            _entities.Replace(camera, new Camera() { EntityTrack = target, TrackSpeed = 10f });
+            _entities.Replace(camera, new Camera()
+            {
+                EntityTrack = target,
+                TrackSpeed = 10f,
+                Width = graphics.PreferredBackBufferWidth,
+                Height = graphics.PreferredBackBufferHeight
+            });
         }
 
         protected override void Update(GameTime gameTime)
