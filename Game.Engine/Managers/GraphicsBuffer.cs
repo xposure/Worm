@@ -10,7 +10,7 @@ namespace Game.Engine.Managers
 
     public class GraphicsBufferFactory : GraphicsBufferFactoryBase
     {
-        public class IndexBuffer16Internal : UnmanagedDispose, IIndexBuffer16
+        public class IndexBuffer16Platform : UnmanagedDispose, IIndexBuffer16
         {
             private readonly GraphicsDevice _device;
             private IndexBuffer _buffer;
@@ -18,7 +18,7 @@ namespace Game.Engine.Managers
 
             public uint ID { get; private set; }
 
-            public IndexBuffer16Internal(uint id, int size, GraphicsDevice device, bool isDynamic)
+            public IndexBuffer16Platform(uint id, int size, GraphicsDevice device, bool isDynamic)
             {
                 ID = id;
                 _device = device;
@@ -51,7 +51,7 @@ namespace Game.Engine.Managers
             }
         }
 
-        public class IndexBuffer32Internal : UnmanagedDispose, IIndexBuffer32
+        public class IndexBuffer32Platform : UnmanagedDispose, IIndexBuffer32
         {
             private readonly GraphicsDevice _device;
             private IndexBuffer _buffer;
@@ -59,7 +59,7 @@ namespace Game.Engine.Managers
 
             public uint ID { get; private set; }
 
-            public IndexBuffer32Internal(uint id, int size, GraphicsDevice device, bool isDynamic)
+            public IndexBuffer32Platform(uint id, int size, GraphicsDevice device, bool isDynamic)
             {
                 ID = id;
                 _device = device;
@@ -91,7 +91,7 @@ namespace Game.Engine.Managers
             }
         }
 
-        public class VertexBufferInternal<T> : UnmanagedDispose, IVertexBuffer<T>
+        public class VertexBufferPlatform<T> : UnmanagedDispose, IVertexBuffer<T>
             where T : unmanaged
         {
             private static bool IsValid => VertexDeclaration != null;
@@ -100,7 +100,7 @@ namespace Game.Engine.Managers
             public static readonly VertexDeclaration VertexDeclaration;
             public static readonly Type VertexType;
 
-            static VertexBufferInternal()
+            static VertexBufferPlatform()
             {
                 try
                 {
@@ -168,7 +168,7 @@ namespace Game.Engine.Managers
 
             public uint ID { get; private set; }
 
-            public VertexBufferInternal(uint id, int size, GraphicsDevice device, bool isDynamic)
+            public VertexBufferPlatform(uint id, int size, GraphicsDevice device, bool isDynamic)
             {
                 if (!IsValid)
                     throw Exception;
@@ -210,13 +210,13 @@ namespace Game.Engine.Managers
             _device = device;
         }
 
-        protected override IIndexBuffer16 CreateIndex16Internal(uint id, int count, bool isDynamic)
-            => new IndexBuffer16Internal(id, count, _device, isDynamic);
+        protected override IIndexBuffer16 CreateIndex16Platform(uint id, int count, bool isDynamic)
+            => new IndexBuffer16Platform(id, count, _device, isDynamic);
 
-        protected override IIndexBuffer32 CreateIndex32Internal(uint id, int count, bool isDynamic)
-            => new IndexBuffer32Internal(id, count, _device, isDynamic);
+        protected override IIndexBuffer32 CreateIndex32Platform(uint id, int count, bool isDynamic)
+            => new IndexBuffer32Platform(id, count, _device, isDynamic);
 
-        protected override IVertexBuffer<T> CreateVertexInternal<T>(uint id, int count, bool isDynamic)
-            => new VertexBufferInternal<T>(id, count, _device, isDynamic);
+        protected override IVertexBuffer<T> CreateVertexPlatform<T>(uint id, int count, bool isDynamic)
+            => new VertexBufferPlatform<T>(id, count, _device, isDynamic);
     }
 }

@@ -2,13 +2,11 @@ namespace Game.Framework
 {
     using System;
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = true)]
-    public class AutoRegisterAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Interface, Inherited = true)]
+    public class GameServiceAttribute : Attribute
     {
-        public readonly bool Singleton;
-        public AutoRegisterAttribute(bool singleton)
+        public GameServiceAttribute()
         {
-            Singleton = singleton;
         }
     }
 

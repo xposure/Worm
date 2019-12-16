@@ -1,14 +1,14 @@
 namespace Game.Framework.Managers
 {
 
-    [AutoRegister(true)]
+    [GameService()]
     public interface IDrawContextFactory
     {
         DrawContext CreateDrawContext();
     }
 
 
-    [AutoRegister(true)]
+    [GameService()]
     public interface IRenderCommandFactory
     {
         IRenderCommandBuffer Create();

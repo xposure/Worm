@@ -128,38 +128,30 @@
                     if (i == typeof(IDisposable))
                         continue;
 
-                    var autoReg = i.GetCustomAttribute<AutoRegisterAttribute>(true);
+                    var autoReg = i.GetCustomAttribute<GameServiceAttribute>(true);
                     if (autoReg != null)
                     {
-                        if (autoReg.Singleton)
-                        {
-                            var singleton = _engineContainer.GetInstance(i);
-                            container.RegisterInstance(i, singleton);
-                            Console.WriteLine($"Passing singleton [{i}] -> [{type}] ");
-                        }
-                        else
-                        {
-                            container.Register(i, type);
-                            Console.WriteLine($"Passing transient [{i}] -> [{type}] ");
-                        }
+                        var singleton = _engineContainer.GetInstance(i);
+                        container.RegisterInstance(i, singleton);
+                        Console.WriteLine($"Passing singleton [{i}] -> [{type}] ");
                     }
                 }
 
-                var typeReg = type.GetCustomAttribute<AutoRegisterAttribute>();
-                if (typeReg != null)
-                {
-                    if (typeReg.Singleton)
-                    {
-                        var singleton = _engineContainer.GetInstance(type);
-                        container.RegisterInstance(type, singleton);
-                        Console.WriteLine($"Passing singleton [{type}] ");
-                    }
-                    else
-                    {
-                        container.Register(type, type);
-                        Console.WriteLine($"Passing transient [{type}] ");
-                    }
-                }
+                // var typeReg = type.GetCustomAttribute<GameServiceAttribute>();
+                // if (typeReg != null)
+                // {
+                //     if (typeReg.Singleton)
+                //     {
+                //         var singleton = _engineContainer.GetInstance(type);
+                //         container.RegisterInstance(type, singleton);
+                //         Console.WriteLine($"Passing singleton [{type}] ");
+                //     }
+                //     else
+                //     {
+                //         container.Register(type, type);
+                //         Console.WriteLine($"Passing transient [{type}] ");
+                //     }
+                // }
             }
 
             return container;
@@ -191,37 +183,29 @@
                     if (i == typeof(IDisposable))
                         continue;
 
-                    var autoReg = i.GetCustomAttribute<AutoRegisterAttribute>(true);
+                    var autoReg = i.GetCustomAttribute<GameServiceAttribute>(true);
                     if (autoReg != null)
                     {
-                        if (autoReg.Singleton)
-                        {
-                            _engineContainer.RegisterSingleton(i, type);
-                            Console.WriteLine($"Registering singleton [{i}] -> [{type}]");
-                        }
-                        else
-                        {
-                            _engineContainer.Register(i, type);
-                            Console.WriteLine($"Registering transient [{i}] -> [{type}]");
-                        }
+                        _engineContainer.RegisterSingleton(i, type);
+                        Console.WriteLine($"Registering singleton [{i}] -> [{type}]");
                     }
                 }
 
-                var typeReg = type.GetCustomAttribute<AutoRegisterAttribute>();
-                if (typeReg != null)
-                {
-                    if (typeReg.Singleton)
-                    {
-                        _engineContainer.RegisterSingleton(type, type);
-                        Console.WriteLine($"Registering singleton [{type}]");
+                // var typeReg = type.GetCustomAttribute<GameServiceAttribute>();
+                // if (typeReg != null)
+                // {
+                //     if (typeReg.Singleton)
+                //     {
+                //         _engineContainer.RegisterSingleton(type, type);
+                //         Console.WriteLine($"Registering singleton [{type}]");
 
-                    }
-                    else
-                    {
-                        _engineContainer.Register(type, type);
-                        Console.WriteLine($"Registering transient [{type}]");
-                    }
-                }
+                //     }
+                //     else
+                //     {
+                //         _engineContainer.Register(type, type);
+                //         Console.WriteLine($"Registering transient [{type}]");
+                //     }
+                // }
             }
 
             _engineContainer.Verify();

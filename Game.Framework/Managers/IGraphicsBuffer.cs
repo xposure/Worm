@@ -38,7 +38,7 @@ namespace Game.Framework.Managers
         void SetData(uint[] data, int startIndex, int length);
     }
 
-    [AutoRegister(true)]
+    [GameService()]
     public interface IGraphicsBufferFactory : IDisposable
     {
         IVertexBuffer<T> CreateVertex<T>(int count, bool isDynamic = false) where T : unmanaged;
@@ -53,23 +53,23 @@ namespace Game.Framework.Managers
         public IVertexBuffer<T> CreateVertex<T>(int count, bool isDynamic = false)
             where T : unmanaged
         {
-            return CreateVertexInternal<T>(++_nextId, count, isDynamic);
+            return CreateVertexPlatform<T>(++_nextId, count, isDynamic);
         }
 
-        protected abstract IVertexBuffer<T> CreateVertexInternal<T>(uint id, int count, bool isDynamic)
+        protected abstract IVertexBuffer<T> CreateVertexPlatform<T>(uint id, int count, bool isDynamic)
             where T : unmanaged;
 
         public IIndexBuffer16 CreateIndex16(int count, bool isDynamic = false)
         {
-            return CreateIndex16Internal(++_nextId, count, isDynamic);
+            return CreateIndex16Platform(++_nextId, count, isDynamic);
         }
-        protected abstract IIndexBuffer16 CreateIndex16Internal(uint id, int count, bool isDynamic);
+        protected abstract IIndexBuffer16 CreateIndex16Platform(uint id, int count, bool isDynamic);
 
         public IIndexBuffer32 CreateIndex32(int count, bool isDynamic = false)
         {
-            return CreateIndex32Internal(++_nextId, count, isDynamic);
+            return CreateIndex32Platform(++_nextId, count, isDynamic);
         }
 
-        protected abstract IIndexBuffer32 CreateIndex32Internal(uint id, int count, bool isDynamic);
+        protected abstract IIndexBuffer32 CreateIndex32Platform(uint id, int count, bool isDynamic);
     }
 }

@@ -3,7 +3,6 @@ namespace Game.Engine.Managers
     using Game.Framework;
     using Game.Framework.Managers;
 
-    [AutoRegister(true)]
     public class DrawContextFactory : IDrawContextFactory
     {
         private readonly ITextureManager _textures;

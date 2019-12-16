@@ -18,7 +18,7 @@ namespace Game.Framework.Managers
         void GetData<T>(T[] data) where T : struct;
     }
 
-    [AutoRegister(true)]
+    [GameService()]
     public interface ITextureManager : IDisposable
     {
         ITexture2D LoadFromFile(string name, string loadFile);
