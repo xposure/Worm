@@ -1,20 +1,19 @@
-namespace Game.Engine.Managers
+namespace Game.Engine.Services
 {
     using System.IO;
     using Atma;
     using Game.Framework;
-    using Game.Framework.Managers;
-    using Microsoft.Extensions.Logging;
+    using Game.Framework.Services.Graphics;
     using Microsoft.Xna.Framework.Graphics;
 
     public class TextureManager : TextureManagerBase, IGameService
     {
-        protected class Texture2DPlatform : UnmanagedDispose, ITexture2D
+        protected class PlatformTexture2D : UnmanagedDispose, ITexture2D
         {
             private GraphicsDevice _device;
             private Texture2D _texture;
 
-            public Texture2DPlatform(uint id, GraphicsDevice device, Texture2D texture)
+            public PlatformTexture2D(uint id, GraphicsDevice device, Texture2D texture)
             {
                 ID = id;
                 _device = device;
@@ -53,7 +52,7 @@ namespace Game.Engine.Managers
         protected override ITexture2D PlatformCreateTexture(uint id, int width, int height)
         {
             var texture = new Texture2D(_device, width, height);
-            return new Texture2DPlatform(id, _device, texture);
+            return new PlatformTexture2D(id, _device, texture);
         }
 
         protected override ITexture2D PlatformLoadFromFile(uint id, string loadFile)
@@ -61,7 +60,7 @@ namespace Game.Engine.Managers
             using (var fs = File.OpenRead(loadFile))
             {
                 var texture = Texture2D.FromStream(_device, fs);
-                return new Texture2DPlatform(id, _device, texture);
+                return new PlatformTexture2D(id, _device, texture);
             }
         }
 

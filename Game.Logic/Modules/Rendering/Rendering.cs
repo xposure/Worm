@@ -9,7 +9,7 @@ namespace Game.Logic.Modules.Rendering
     using Atma.Memory;
     using Atma.Systems;
     using Game.Framework;
-    using Game.Framework.Managers;
+    using Game.Framework.Services.Graphics;
     using Color = global::Color;
 
     [Stages(nameof(RenderStage))]

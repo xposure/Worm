@@ -1,4 +1,4 @@
-namespace Game.Framework.Managers
+namespace Game.Framework.Services.Graphics
 {
     using System;
     using System.Collections.Generic;

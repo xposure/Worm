@@ -4,12 +4,11 @@ namespace Game.Engine
     using Atma;
     using Atma.Math;
     using Atma.Memory;
-    using Game.Framework;
-    using Game.Framework.Managers;
+    using Game.Framework.Services.Graphics;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
 
-    public class RenderCommandFactory : IRenderCommandFactory
+    public class RenderCommandFactory : Framework.Services.Graphics.IRenderCommandFactory
     {
         private readonly IAllocator _memory;
         private readonly GraphicsDevice _device;

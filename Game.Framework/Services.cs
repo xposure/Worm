@@ -2,6 +2,7 @@ namespace Game.Framework
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Reflection;
     using System.Text;
     using Atma;
@@ -81,32 +82,37 @@ namespace Game.Framework
                 it.Initialize();
         }
 
+        private bool IsValidServiceInterface(Type it) => it != typeof(IDisposable) && _services.Contains(it);
+
         private void RegisterPlatformServices(Assembly platformAsm, Container container)
         {
-            var platformTypes = platformAsm.GetExportedTypes();
             var matchedServices = new HashSet<Type>();
+            var platformServicesQuery = from serviceType in platformAsm.GetExportedTypes()
+                                        where serviceType.IsClass && !serviceType.IsAbstract
+                                        from serviceInterface in serviceType.GetInterfaces()
+                                        where IsValidServiceInterface(serviceInterface)
+                                        select new { serviceType, serviceInterface };
 
-            foreach (var platformType in platformTypes)
+            var platformServices = platformServicesQuery.ToArray();
+            foreach (var it in platformServices)
             {
-                var interfaces = platformType.GetInterfaces();
-                foreach (var it in interfaces)
-                {
-                    if (it == typeof(IDisposable))
-                        continue;
-
-                    if (_services.Contains(it))
-                    {
-                        if (!matchedServices.Add(it))
-                        {
-                            _logger.LogError($"Duplicate service implementation for [{it.FullName}].");
-                        }
-                        else
-                        {
-                            container.RegisterSingleton(it, platformType);
-                        }
-                    }
-                }
+                if (!matchedServices.Add(it.serviceInterface))
+                    _logger.LogError($"Duplicate service implementation [{it.serviceType.FullName}] for service [{it.serviceInterface.FullName}].");
+                else
+                    container.RegisterSingleton(it.serviceInterface, it.serviceType);
             }
+
+            var frameworkServicesQuery = from serviceType in typeof(GameServiceManager).Assembly.GetExportedTypes()
+                                         where serviceType.IsClass && !serviceType.IsAbstract
+                                         where !matchedServices.Contains(serviceType)
+                                         from serviceInterface in serviceType.GetInterfaces()
+                                         where IsValidServiceInterface(serviceInterface)
+                                         select new { serviceType, serviceInterface };
+
+            var framworkServices = frameworkServicesQuery.ToArray();
+            foreach (var it in framworkServices)
+                if (matchedServices.Add(it.serviceInterface))
+                    container.RegisterSingleton(it.serviceInterface, it.serviceType);
 
             if (matchedServices.Count != _services.Count)
             {

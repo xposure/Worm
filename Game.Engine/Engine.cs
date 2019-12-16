@@ -26,8 +26,6 @@
     using SimpleInjector;
 
     using Game.Framework;
-    using Game.Framework.Managers;
-    using Game.Engine.Managers;
     using System.Reflection;
     using System.Linq;
 

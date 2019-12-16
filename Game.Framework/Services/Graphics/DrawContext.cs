@@ -1,4 +1,4 @@
-namespace Game.Framework.Managers
+namespace Game.Framework.Services.Graphics
 {
     using System;
     using System.Collections.Generic;
@@ -33,32 +33,25 @@ namespace Game.Framework.Managers
 
     }
 
-    public enum RenderCameraType
+    [GameService]
+    public interface IDrawContextFactory
     {
-        World,
-        Projection,
-        View
+        DrawContext CreateDrawContext();
     }
 
-
-
-    public interface IRenderCommandBuffer : IDisposable
+    public class DrawContextFactory : IDrawContextFactory
     {
+        private readonly ITextureManager _textures;
+        private readonly IGraphicsBufferFactory _bufferFactory;
+        private readonly IRenderCommandFactory _renderCommandFactory;
+        public DrawContextFactory(ITextureManager textures, IGraphicsBufferFactory bufferFactory, IRenderCommandFactory renderCommandFactory)
+        {
+            _textures = textures;
+            _bufferFactory = bufferFactory;
+            _renderCommandFactory = renderCommandFactory;
+        }
 
-        int Triangles { get; }
-        int Commands { get; }
-
-        void SetTexture(ITexture texture);
-        void SetCamera(RenderCameraType type, in float4x4 matrix);
-
-        void RenderPrimitives(int startIndex, int primitiveCount);
-
-        void UpdateProjection();
-
-        void ResetState();
-        void Render();
-        void SetIndexBuffer(IIndexBuffer buffer);
-        void SetVertexBuffer(IVertexBuffer buffer);
+        public DrawContext CreateDrawContext() => new DrawContext(_textures, _bufferFactory, _renderCommandFactory.Create());
     }
 
     public readonly ref struct BulkSrpiteOperation
@@ -77,6 +70,7 @@ namespace Game.Framework.Managers
             _batch.CompleteBulkOperation(this);
         }
     }
+
 
     public class DrawContext : UnmanagedDispose
     {
@@ -470,5 +464,4 @@ namespace Game.Framework.Managers
             _indexBuffer.Dispose();
         }
     }
-
 }
