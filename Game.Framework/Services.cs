@@ -8,34 +8,39 @@ namespace Game.Framework
     using Microsoft.Extensions.Logging;
     using SimpleInjector;
 
-    public interface IGameService : IDisposable
+    public interface IGameService //: IDisposable
     {
         //Type Interface { get; }
         void Initialize();
 
-        void Tick();
+        void Tick(float dt);
     }
 
-    public abstract class GameService<T> : UnmanagedDispose, IGameService
-    {
-        //public Type Interface => typeof(T);
+    // public abstract class GameService<T> : UnmanagedDispose, IGameService
+    // {
 
-        public void Initialize() => OnInitialize();
+    //     public void Initialize() => OnInitialize();
 
-        public void Tick() => OnTick();
+    //     public void Tick() => OnTick();
 
-        protected virtual void OnInitialize() { }
+    //     protected virtual void OnInitialize() { }
 
-        protected virtual void OnTick() { }
-    }
+    //     protected virtual void OnTick() { }
+    // }
 
-    public class GameServiceManager
+    public class GameServiceManager : UnmanagedDispose
     {
         private ILogger _logger;
         private HashSet<Type> _services = new HashSet<Type>();
+        private List<IGameService> _gameServices = new List<IGameService>();
 
-        public GameServiceManager(ILoggerFactory logFactory)
+        private Container _serviceContainer;
+        private Assembly _platformAssembly;
+
+        public GameServiceManager(Assembly platformAsm, Container serviceContainer, ILoggerFactory logFactory)
         {
+            _platformAssembly = platformAsm;
+            _serviceContainer = serviceContainer;
             _logger = logFactory.CreateLogger<GameServiceManager>();
 
             var ourAssembly = typeof(GameServiceManager).Assembly;
@@ -57,9 +62,26 @@ namespace Game.Framework
             if (_services.Count == 0)
                 _logger.LogError("No services found!");
 
+            RegisterPlatformServices(_platformAssembly, _serviceContainer);
         }
 
-        public void RegisterPlatformServices(Assembly platformAsm, Container container)
+        public void Initialize()
+        {
+            var gameServiceType = typeof(IGameService);
+            foreach (var it in _services)
+            {
+                var service = _serviceContainer.GetInstance(it);
+                var serviceType = service.GetType();
+                if (gameServiceType.IsAssignableFrom(serviceType))
+                    _gameServices.Add((IGameService)service);
+
+            }
+
+            foreach (var it in _gameServices)
+                it.Initialize();
+        }
+
+        private void RegisterPlatformServices(Assembly platformAsm, Container container)
         {
             var platformTypes = platformAsm.GetExportedTypes();
             var matchedServices = new HashSet<Type>();
@@ -100,7 +122,6 @@ namespace Game.Framework
 
                 throw new Exception("The following services were missing in the platform.\n" + sb.ToString());
             }
-
         }
 
         public void RegisterPlatformInstances(Container services, Container target)
@@ -109,7 +130,19 @@ namespace Game.Framework
             {
                 var service = services.GetInstance(it);
                 target.RegisterInstance(it, service);
+
             }
+        }
+
+        public void Tick(float dt)
+        {
+            foreach (var it in _gameServices)
+                it.Tick(dt);
+        }
+
+        protected override void OnManagedDispose()
+        {
+            _gameServices.Clear();
         }
     }
 }

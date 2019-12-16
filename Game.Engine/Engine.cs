@@ -70,7 +70,6 @@
 
             _logger = _logFactory.CreateLogger<Engine>();
 
-            _services = new GameServiceManager(_logFactory);
         }
 
         private GameExecutionEngine CheckGEE()
@@ -118,6 +117,7 @@
         protected override void Initialize()
         {
             _logger.LogInformation("Init");
+
             _memory = new HeapAllocator(_logFactory).ThreadSafe;
             _entities = new EntityManager(_logFactory, _memory);
 
@@ -130,13 +130,11 @@
             _engineContainer.RegisterInstance(typeof(IAllocator), _memory);
             _engineContainer.RegisterInstance(_entities);
 
-            _services.RegisterPlatformServices(typeof(Engine).Assembly, _engineContainer);
+            _services = new GameServiceManager(typeof(Engine).Assembly, _engineContainer, _logFactory);
 
             _engineContainer.Verify();
 
-            var textures = _engineContainer.GetInstance<ITextureManager>();
-            var texture = textures.CreateTexture("default", 1, 1);
-            texture.SetData(new Color[1] { Color.Magenta });
+            _services.Initialize();
 
             _geeReloadTask = Task.Run(() => CheckGEE());
             base.Initialize();
@@ -267,6 +265,8 @@
 
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             updateTimer.Restart();
+
+            _services.Tick(dt);
 
             _gee?.Update(dt);
 

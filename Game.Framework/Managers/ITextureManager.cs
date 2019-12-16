@@ -54,7 +54,7 @@ namespace Game.Framework.Managers
         public ITexture2D LoadFromFile(string name, string loadFile)
         {
             var id = GetId(name);
-            var texture = LoadFromFileInternal(id, loadFile);
+            var texture = PlatformLoadFromFile(id, loadFile);
             _textures.Add(id, texture);
             return texture;
         }
@@ -62,16 +62,16 @@ namespace Game.Framework.Managers
         public ITexture2D CreateTexture(string name, int width, int height)
         {
             var id = GetId(name);
-            var texture = CreateTextureInternal(id, width, height);
+            var texture = PlatformCreateTexture(id, width, height);
             _textures.Add(id, texture);
             return texture;
         }
 
         protected uint GetId(string name) => (uint)name.GetHashCode();
 
-        protected abstract ITexture2D CreateTextureInternal(uint id, int width, int height);
+        protected abstract ITexture2D PlatformCreateTexture(uint id, int width, int height);
 
-        protected abstract ITexture2D LoadFromFileInternal(uint id, string loadFile);
+        protected abstract ITexture2D PlatformLoadFromFile(uint id, string loadFile);
 
         protected override void OnManagedDispose()
         {
