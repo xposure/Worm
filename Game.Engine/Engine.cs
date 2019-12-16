@@ -12,37 +12,31 @@
     using Atma.Memory;
     using Atma.Entities;
     using Atma.Math;
-    using Atma.Systems;
 
     using System;
     using System.IO;
     using System.Diagnostics;
-    using System.Collections.Generic;
     using System.Threading.Tasks;
+    using System.Threading;
     using Microsoft.Extensions.Logging;
-    //using Microsoft.Extensions.Logging.Debug;
 
     using SimpleInjector;
 
     using Game.Framework;
-    using System.Reflection;
-    using System.Linq;
-    using System.Threading;
 
     public class Engine : Game
     {
-
         public const int TILE_SIZE = 4;
 
-        private ManualResetEvent _reloadEvent = new ManualResetEvent(true);
         private ManualResetEvent _requestReload = new ManualResetEvent(true);
 
         private readonly ILoggerFactory _logFactory;
         private ILogger _logger;
-        private IAllocator _memory;
-        private EntityManager _entities;
         private GameServiceManager _services;
-        GraphicsDeviceManager graphics;
+
+        private Container _serviceContainer = new Container();
+        private GameExecutionEngine _gee;
+        private GraphicsDeviceManager graphics;
 
         private Stopwatch updateTimer = new Stopwatch();
         private Stopwatch renderTimer = new Stopwatch();
@@ -52,8 +46,6 @@
 
         private Task<GameExecutionEngine> _geeReloadTask;
 
-        private Container _engineContainer = new Container();
-        private GameExecutionEngine _gee;
         private bool _isRunning = true;
 
         public Engine()
@@ -66,7 +58,6 @@
             {
                 builder.SetMinimumLevel(LogLevel.Debug);
                 builder.AddConsole(configure => configure.DisableColors = false);
-                //builder.AddProvider(new ConsoleLoggingProvider());
             });
 
             _logger = _logFactory.CreateLogger<Engine>();
@@ -92,19 +83,19 @@
         private Container CreateDI()
         {
             var container = new Container();
+
             //singletons
             container.RegisterInstance(this);
             container.RegisterInstance(GraphicsDevice);
             container.RegisterInstance(graphics);
-            container.RegisterInstance<IAllocator>(_memory);
-            container.RegisterInstance<EntityManager>(_entities);
+            container.RegisterInstance<IAllocator>(_serviceContainer.GetInstance<IAllocator>());
+            container.RegisterInstance<EntityManager>(_serviceContainer.GetInstance<EntityManager>());
 
             //logging
             container.RegisterInstance<ILoggerFactory>(_logFactory);
             container.Register(typeof(ILogger<>), typeof(Logger<>));
 
-            _services.RegisterPlatformInstances(_engineContainer, container);
-
+            _services.RegisterPlatformInstances(_serviceContainer, container);
 
             return container;
         }
@@ -113,21 +104,18 @@
         {
             _logger.LogInformation("Init");
 
-            _memory = new HeapAllocator(_logFactory).ThreadSafe;
-            _entities = new EntityManager(_logFactory, _memory);
+            _serviceContainer.RegisterInstance(this);
+            _serviceContainer.RegisterInstance(GraphicsDevice);
+            _serviceContainer.RegisterInstance(graphics);
 
-            _engineContainer.RegisterInstance(this);
-            _engineContainer.RegisterInstance(GraphicsDevice);
-            _engineContainer.RegisterInstance(graphics);
+            _serviceContainer.RegisterInstance<ILoggerFactory>(_logFactory);
+            _serviceContainer.Register(typeof(ILogger<>), typeof(Logger<>));
+            _serviceContainer.RegisterSingleton(typeof(IAllocator), typeof(HeapAllocator));
+            _serviceContainer.RegisterSingleton(typeof(EntityManager), typeof(EntityManager));
 
-            _engineContainer.RegisterInstance<ILoggerFactory>(_logFactory);
-            _engineContainer.Register(typeof(ILogger<>), typeof(Logger<>));
-            _engineContainer.RegisterInstance(typeof(IAllocator), _memory);
-            _engineContainer.RegisterInstance(_entities);
+            _services = new GameServiceManager(typeof(Engine).Assembly, _serviceContainer, _logFactory);
 
-            _services = new GameServiceManager(typeof(Engine).Assembly, _engineContainer, _logFactory);
-
-            _engineContainer.Verify();
+            _serviceContainer.Verify();
 
             _services.Initialize();
 
@@ -154,11 +142,8 @@
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                _entities.Dispose();
-                _memory.Dispose();
-            }
+            _gee.Dispose();
+            _serviceContainer.Dispose();
 
             base.Dispose(disposing);
         }
@@ -166,16 +151,8 @@
         protected unsafe override void LoadContent()
         {
             base.LoadContent();
-            //DI.RegisterInstance(Sprites);
-            //DI.RegisterInstance(Animations);
-            //DI.RegisterInstance(Prefabs);
-            //Sprites.Init();
-            //Animations.Init();
-            //Prefabs.Init();
 
             CreateWalls();
-            //var player = CreatePlayer();
-            //CreateCamera(player);
             CreateCamera(0);
         }
 
@@ -184,12 +161,13 @@
             using (var sr = File.OpenText(@"Assets\room.data"))
             {
                 var wallSpec = EntitySpec.Create<Position, Sprite, Color, Solid, Scale>();
+                var em = _serviceContainer.GetInstance<EntityManager>();
 
-                var wall2 = _entities.Create(wallSpec);
-                _entities.Replace(wall2, new Sprite(0, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
-                _entities.Replace(wall2, new Scale(1, 1));
-                _entities.Replace(wall2, new Position(0, 0));
-                _entities.Replace(wall2, Color.Green);
+                var wall2 = em.Create(wallSpec);
+                em.Replace(wall2, new Sprite(0, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
+                em.Replace(wall2, new Scale(1, 1));
+                em.Replace(wall2, new Position(0, 0));
+                em.Replace(wall2, Color.Green);
 
                 string line = null;
                 var y = 0;
@@ -199,12 +177,12 @@
                     {
                         if (line[x] == '1')
                         {
-                            var wall = _entities.Create(wallSpec);
-                            _entities.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
-                            _entities.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
-                            _entities.Replace(wall, new Scale(1, 1));
-                            _entities.Replace(wall, Color.White);
-                            _entities.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
+                            var wall = em.Create(wallSpec);
+                            em.Replace(wall, new Sprite(0, TILE_SIZE, TILE_SIZE) { OriginX = 0, OriginY = 0 });
+                            em.Replace(wall, new Position(x * TILE_SIZE, y * TILE_SIZE));
+                            em.Replace(wall, new Scale(1, 1));
+                            em.Replace(wall, Color.White);
+                            em.Replace(wall, new Solid() { Bounds = AxisAlignedBox2.FromRect(float2.Zero, new float2(TILE_SIZE, TILE_SIZE)) });
                         }
                     }
                     y++;
@@ -214,15 +192,17 @@
 
         private uint CreatePlayer()
         {
+            var em = _serviceContainer.GetInstance<EntityManager>();
+
             var playerSpec = EntitySpec.Create<Position, Sprite, PlayerInput, TextureRegion, Collider, Move, Gravity, Input>();
-            var player = _entities.Create(playerSpec);
-            _entities.Replace(player, new PlayerInput());
-            _entities.Replace(player, new Move() { Friction = new float2(0.85f), Acceleration = new float2(2000), Speed = float2.Zero });
-            _entities.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
+            var player = em.Create(playerSpec);
+            em.Replace(player, new PlayerInput());
+            em.Replace(player, new Move() { Friction = new float2(0.85f), Acceleration = new float2(2000), Speed = float2.Zero });
+            em.Replace(player, new Position(TILE_SIZE, 21 * TILE_SIZE));
             //_entities.Replace(player, new Sprite(Sprites.Player, 32, 48) { OriginX = 0.5f, OriginY = 1f });
-            _entities.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromRect(new float2(16, 48), new float2(32, 48)) });
+            em.Replace(player, new Collider() { Type = ColliderType.Player, Bounds = AxisAlignedBox2.FromRect(new float2(16, 48), new float2(32, 48)) });
             //_entities.Replace(player, FromTexture(Sprites.Player, 16, 24, 0, 2));
-            _entities.Replace(player, Gravity.Default);
+            em.Replace(player, Gravity.Default);
             return player;
         }
         public static TextureRegion FromTexture(Texture2D texture, int tileWidth, int tileHeight, int tileX, int tileY)
@@ -240,9 +220,10 @@
         }
         private void CreateCamera(uint target)
         {
+            var em = _serviceContainer.GetInstance<EntityManager>();
             var cameraSpec = EntitySpec.Create<Camera, Position>();
-            var camera = _entities.Create(cameraSpec);
-            _entities.Replace(camera, new Camera()
+            var camera = em.Create(cameraSpec);
+            em.Replace(camera, new Camera()
             {
                 EntityTrack = target,
                 TrackSpeed = 10f,
