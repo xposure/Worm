@@ -1,14 +1,14 @@
 namespace Game.Framework.Managers
 {
 
-    [GameService()]
+    [GameService]
     public interface IDrawContextFactory
     {
         DrawContext CreateDrawContext();
     }
 
 
-    [GameService()]
+    [GameService]
     public interface IRenderCommandFactory
     {
         IRenderCommandBuffer Create();

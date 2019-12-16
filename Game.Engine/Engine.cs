@@ -20,6 +20,7 @@
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
+    //using Microsoft.Extensions.Logging.Debug;
 
     using Worm.Managers;
     using SimpleInjector;
@@ -35,20 +36,12 @@
 
         public const int TILE_SIZE = 4;
 
-        private static Engine _instance;
-        public static Engine Instance => _instance;
-
-        GraphicsDeviceManager graphics;
-
         private readonly ILoggerFactory _logFactory;
         private ILogger _logger;
-        private EntityManager _entities;
-        public EntityManager Entities => _entities;
-
-        //private SystemManager
-
         private IAllocator _memory;
-        public IAllocator Memory => _memory;
+        private EntityManager _entities;
+        private GameServiceManager _services;
+        GraphicsDeviceManager graphics;
 
         private Stopwatch updateTimer = new Stopwatch();
         private Stopwatch renderTimer = new Stopwatch();
@@ -59,21 +52,25 @@
         private Task<GameExecutionEngine> _geeReloadTask;
 
         private Container _engineContainer = new Container();
-
         private GameExecutionEngine _gee;
         private bool _isRunning = true;
 
         public Engine()
         {
-            _instance = this;
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            _logFactory = LoggerFactory.Create(builder => { builder.AddConsole(configure => { }); });
+            _logFactory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(LogLevel.Debug);
+                builder.AddConsole(configure => configure.DisableColors = false);
+                //builder.AddProvider(new ConsoleLoggingProvider());
+            });
+
             _logger = _logFactory.CreateLogger<Engine>();
 
-
+            _services = new GameServiceManager(_logFactory);
         }
 
         private GameExecutionEngine CheckGEE()
@@ -112,53 +109,15 @@
             container.RegisterInstance<ILoggerFactory>(_logFactory);
             container.Register(typeof(ILogger<>), typeof(Logger<>));
 
-            //container.Collection.Append(typeof(ISystem), typeof(SpriteRenderer), Lifestyle.Singleton);
+            _services.RegisterPlatformInstances(_engineContainer, container);
 
-            //we are not properly registering our factories
-
-            var asm = Assembly.GetExecutingAssembly();
-            var types = from type in asm.GetExportedTypes()
-                        select type;
-
-            foreach (var type in types)
-            {
-                var interfaces = type.GetInterfaces();
-                foreach (var i in interfaces)
-                {
-                    if (i == typeof(IDisposable))
-                        continue;
-
-                    var autoReg = i.GetCustomAttribute<GameServiceAttribute>(true);
-                    if (autoReg != null)
-                    {
-                        var singleton = _engineContainer.GetInstance(i);
-                        container.RegisterInstance(i, singleton);
-                        Console.WriteLine($"Passing singleton [{i}] -> [{type}] ");
-                    }
-                }
-
-                // var typeReg = type.GetCustomAttribute<GameServiceAttribute>();
-                // if (typeReg != null)
-                // {
-                //     if (typeReg.Singleton)
-                //     {
-                //         var singleton = _engineContainer.GetInstance(type);
-                //         container.RegisterInstance(type, singleton);
-                //         Console.WriteLine($"Passing singleton [{type}] ");
-                //     }
-                //     else
-                //     {
-                //         container.Register(type, type);
-                //         Console.WriteLine($"Passing transient [{type}] ");
-                //     }
-                // }
-            }
 
             return container;
         }
 
         protected override void Initialize()
         {
+            _logger.LogInformation("Init");
             _memory = new HeapAllocator(_logFactory).ThreadSafe;
             _entities = new EntityManager(_logFactory, _memory);
 
@@ -171,42 +130,7 @@
             _engineContainer.RegisterInstance(typeof(IAllocator), _memory);
             _engineContainer.RegisterInstance(_entities);
 
-            var asm = Assembly.GetExecutingAssembly();
-            var types = from type in asm.GetExportedTypes()
-                        select type;
-
-            foreach (var type in types)
-            {
-                var interfaces = type.GetInterfaces();
-                foreach (var i in interfaces)
-                {
-                    if (i == typeof(IDisposable))
-                        continue;
-
-                    var autoReg = i.GetCustomAttribute<GameServiceAttribute>(true);
-                    if (autoReg != null)
-                    {
-                        _engineContainer.RegisterSingleton(i, type);
-                        Console.WriteLine($"Registering singleton [{i}] -> [{type}]");
-                    }
-                }
-
-                // var typeReg = type.GetCustomAttribute<GameServiceAttribute>();
-                // if (typeReg != null)
-                // {
-                //     if (typeReg.Singleton)
-                //     {
-                //         _engineContainer.RegisterSingleton(type, type);
-                //         Console.WriteLine($"Registering singleton [{type}]");
-
-                //     }
-                //     else
-                //     {
-                //         _engineContainer.Register(type, type);
-                //         Console.WriteLine($"Registering transient [{type}]");
-                //     }
-                // }
-            }
+            _services.RegisterPlatformServices(typeof(Engine).Assembly, _engineContainer);
 
             _engineContainer.Verify();
 
