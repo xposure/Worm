@@ -13,7 +13,6 @@ namespace Game.Framework
 
     public class GameExecutionEngine : UnmanagedDispose
     {
-
         private Type[] _systemTypes;
         private Type[] _systemProducers;
 
@@ -100,7 +99,7 @@ namespace Game.Framework
 
         //public IEnumerable<ISystem> Systems => container.GetAllInstances<ISystem>();
 
-        public virtual void Init()
+        public void Init()
         {
             WaitForAccess(_pluginFile);
 
