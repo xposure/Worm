@@ -6,6 +6,7 @@
   </PropertyGroup>
 
  <ItemGroup>
+    <PackageReference Include="Glob" Version="1.1.5" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.0.0" />
     <PackageReference Include="SimpleInjector" Version="4.8.1" />
