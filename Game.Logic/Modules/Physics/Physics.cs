@@ -19,7 +19,7 @@ namespace Game.Logic.Modules.Physics
         {
             var t = (sin % 2) - 1;
             scale.Width = t * t * 2 + 1;
-            scale.Height = t * t * t * t * 2 + 1;
+            scale.Height += t * t * t * t * 2 + 1;
 
 
             //position.X -= 0.1f;
