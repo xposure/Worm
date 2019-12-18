@@ -7,6 +7,7 @@ namespace Game.Framework
     using System.Reflection;
     using Atma;
     using Atma.Entities;
+    using Atma.Events;
     using Atma.Memory;
     using Atma.Systems;
     using SimpleInjector;
@@ -24,6 +25,10 @@ namespace Game.Framework
         private DateTime _lastWrite;
 
         private SystemManager _systems;
+
+        private EventManager _events;
+
+        private EntityManager _entities;
 
         public GameExecutionEngine(Container container, string plugin)
         {
@@ -59,6 +64,9 @@ namespace Game.Framework
                 _container.Collection.Append(typeof(SystemProducer), it, Lifestyle.Singleton);
 
             _container.Verify();
+
+            _entities = _container.GetInstance<EntityManager>();
+            _events = _container.GetInstance<EventManager>();
 
             _systems = _container.GetInstance<SystemManager>();
             _systems.DefaultStage = nameof(UpdateStage);
@@ -138,6 +146,8 @@ namespace Game.Framework
         public virtual void Update(float dt)
         {
             _systems.Tick(nameof(UpdateStage));
+
+            _events.Fire(nameof(Events.Tick), dt);
         }
 
         public virtual void Draw(float dt)
@@ -148,6 +158,12 @@ namespace Game.Framework
         protected override void OnManagedDispose()
         {
             _container.Dispose();
+        }
+
+        public void LoadScene()
+        {
+            _entities.ClearAll();
+            _events.Fire(nameof(Events.LoadScene), 0f);
         }
     }
 }
