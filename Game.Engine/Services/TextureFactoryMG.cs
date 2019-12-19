@@ -1,9 +1,12 @@
 namespace Game.Engine.Services
 {
+    using System.Collections.Concurrent;
     using System.IO;
     using Atma;
     using Game.Framework;
+    using Game.Framework.Services;
     using Game.Framework.Services.Graphics;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Xna.Framework.Graphics;
 
     public class TextureFactoryMG : TextureFactoryBase, IGameService
@@ -42,11 +45,19 @@ namespace Game.Engine.Services
             }
         }
 
+        private ILogger _logger;
         private GraphicsDevice _device;
+        private IFileSystem _fileSystem;
 
-        public TextureFactoryMG(GraphicsDevice device)
+        private ITexture2D _onePixel;
+
+        public override ITexture2D OnePixel => _onePixel;
+
+        public TextureFactoryMG(ILoggerFactory logFactory, GraphicsDevice device, IFileSystem fileSystem)
         {
+            _logger = logFactory.CreateLogger<TextureFactoryMG>();
             _device = device;
+            _fileSystem = fileSystem;
         }
 
         protected override ITexture2D PlatformCreateTexture(uint id, int width, int height)
@@ -55,23 +66,34 @@ namespace Game.Engine.Services
             return new PlatformTexture2D(id, _device, texture);
         }
 
-        protected override ITexture2D PlatformLoadFromFile(uint id, string loadFile)
+        protected override ITexture2D PlatformLoadFromFile(uint id, IReadOnlyFile file)
         {
-            using (var fs = File.OpenRead(loadFile))
+            _logger.LogDebug($"Loading texture {id} [{file}]");
+            using (var fs = file.OpenRead())
             {
                 var texture = Texture2D.FromStream(_device, fs);
                 return new PlatformTexture2D(id, _device, texture);
             }
         }
 
+        private ConcurrentBag<IReadOnlyFile> _modifiedFiles = new ConcurrentBag<IReadOnlyFile>();
+
         public void Initialize()
         {
-            var texture = CreateTexture("default", 1, 1);
-            texture.SetData(new Color[1] { new Color(Microsoft.Xna.Framework.Color.Magenta.PackedValue) });
+            _onePixel = new PlatformTexture2D(0, _device, new Texture2D(_device, 1, 1));
+            _onePixel.SetData(new Color[1] { new Color(Microsoft.Xna.Framework.Color.Magenta.PackedValue) });
+
+            var files = _fileSystem.FindAssets("textures/**/*", FileType.IMAGE);
+            foreach (var it in files)
+                LoadFromFile(it);
+
+            Track(files.Observe(file => _modifiedFiles.Add(file)));
         }
 
         public void Tick(float dt)
         {
+            while (_modifiedFiles.TryTake(out var file))
+                LoadFromFile(file);
         }
     }
 }

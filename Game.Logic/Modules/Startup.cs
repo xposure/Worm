@@ -14,16 +14,12 @@ namespace Game.Logic
 
         private EntityManager _entities;
 
-        public Startup(EntityManager entities, IEventManager events)
+        public Startup(EntityManager entities)
         {
             _entities = entities;
-            var mi = typeof(Startup).GetMethod("LoadScene");
-            var action = (Action)mi.CreateDelegate(typeof(Action), this);
-
-            Track(events.Subscribe(nameof(Events.LoadScene), action));
-
         }
 
+        [Event]
         public void LoadScene()
         {
             CreateWalls();
@@ -39,7 +35,7 @@ namespace Game.Logic
                 var em = _entities;
 
                 var wall2 = em.Create(wallSpec);
-                em.Replace(wall2, new Sprite(0, 100, 100) { OriginX = 0.5f, OriginY = 0.5f });
+                em.Replace(wall2, new Sprite(0, 100, 100) { TextureID = 0, OriginX = 0.5f, OriginY = 0.5f });
                 em.Replace(wall2, new Scale(1, 1));
                 em.Replace(wall2, new Position(0, 0));
                 em.Replace(wall2, Color.White);

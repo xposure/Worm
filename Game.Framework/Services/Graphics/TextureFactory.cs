@@ -21,7 +21,7 @@ namespace Game.Framework.Services.Graphics
     [GameService()]
     public interface ITextureFactory : IDisposable
     {
-        ITexture2D LoadFromFile(string name, string loadFile);
+        ITexture2D LoadFromFile(IReadOnlyFile file);
         ITexture2D CreateTexture(string name, int width, int height);
         ITexture2D this[string name] { get; }
         ITexture2D this[uint textureId] { get; }
@@ -40,22 +40,22 @@ namespace Game.Framework.Services.Graphics
             {
                 //TODO: create default texture with an init method
                 if (!_textures.TryGetValue(textureId, out var texture))
-                    return _textures[GetId("default")];
+                    return OnePixel;
 
                 return texture;
             }
         }
 
-        public TextureFactoryBase()
-        {
+        public abstract ITexture2D OnePixel { get; }
 
-        }
-
-        public ITexture2D LoadFromFile(string name, string loadFile)
+        public ITexture2D LoadFromFile(IReadOnlyFile file)
         {
-            var id = GetId(name);
-            var texture = PlatformLoadFromFile(id, loadFile);
-            _textures.Add(id, texture);
+            var id = GetId(file.Name);
+            var texture = PlatformLoadFromFile(id, file);
+            if (_textures.ContainsKey(id))
+                _textures[id] = texture;
+            else
+                _textures.Add(id, texture);
             return texture;
         }
 
@@ -63,7 +63,10 @@ namespace Game.Framework.Services.Graphics
         {
             var id = GetId(name);
             var texture = PlatformCreateTexture(id, width, height);
-            _textures.Add(id, texture);
+            if (_textures.ContainsKey(id))
+                _textures[id] = texture;
+            else
+                _textures.Add(id, texture);
             return texture;
         }
 
@@ -71,7 +74,7 @@ namespace Game.Framework.Services.Graphics
 
         protected abstract ITexture2D PlatformCreateTexture(uint id, int width, int height);
 
-        protected abstract ITexture2D PlatformLoadFromFile(uint id, string loadFile);
+        protected abstract ITexture2D PlatformLoadFromFile(uint id, IReadOnlyFile file);
 
         protected override void OnManagedDispose()
         {

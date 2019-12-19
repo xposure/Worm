@@ -8,10 +8,10 @@ namespace Game.Logic.Modules.Physics
 
         private float sin = 0f;
 
-
-        public Physics(IEventManager events)
+        [Event]
+        private void Tick(float dt)
         {
-            Track(events.Subscribe<float>(nameof(Events.Tick), dt => sin += dt));
+            sin += dt;
         }
 
         [Has(typeof(Sprite))]
