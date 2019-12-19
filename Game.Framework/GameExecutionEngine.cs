@@ -28,6 +28,8 @@ namespace Game.Framework
 
         private IEventManager _events;
 
+        private IAutoEventManager _autoEvents;
+
         private EntityManager _entities;
 
         public GameExecutionEngine(Container container, string plugin)
@@ -67,6 +69,7 @@ namespace Game.Framework
 
             _entities = _container.GetInstance<EntityManager>();
             _events = _container.GetInstance<IEventManager>();
+            _autoEvents = _container.GetInstance<IAutoEventManager>();
 
             _systems = _container.GetInstance<SystemManager>();
             _systems.DefaultStage = nameof(UpdateStage);
@@ -74,11 +77,18 @@ namespace Game.Framework
             _systems.AddStage(nameof(RenderStage));
 
             foreach (var system in _container.GetAllInstances<ISystem>())
+            {
                 _systems.Register(system);
+
+                if (system is UnmanagedDispose disposable)
+                    _autoEvents.Subscribe(disposable);
+            }
 
             foreach (var system in _container.GetAllInstances<SystemProducer>())
+            {
                 _systems.Register(system);
-
+                _autoEvents.Subscribe(system);
+            }
 
             _systems.Init();
         }
@@ -104,8 +114,6 @@ namespace Game.Framework
                     File.Copy(it, Path.Combine(dst, Path.GetRelativePath(dir, it)));
             }
         }
-
-        //public IEnumerable<ISystem> Systems => container.GetAllInstances<ISystem>();
 
         public void Init()
         {

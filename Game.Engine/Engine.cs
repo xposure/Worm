@@ -91,6 +91,7 @@
             container.RegisterInstance<IAllocator>(_serviceContainer.GetInstance<IAllocator>());
             container.RegisterInstance<EntityManager>(_serviceContainer.GetInstance<EntityManager>());
             container.RegisterInstance<IEventManager>(_serviceContainer.GetInstance<IEventManager>());
+            container.RegisterInstance<IAutoEventManager>(_serviceContainer.GetInstance<AutoEventManager>());
 
             //logging
             container.RegisterInstance<ILoggerFactory>(_logFactory);
@@ -114,6 +115,7 @@
             _serviceContainer.RegisterSingleton(typeof(IAllocator), typeof(HeapAllocator));
             _serviceContainer.RegisterSingleton(typeof(EntityManager), typeof(EntityManager));
             _serviceContainer.RegisterSingleton(typeof(IEventManager), typeof(EventManager));
+            _serviceContainer.RegisterSingleton(typeof(IAutoEventManager), typeof(AutoEventManager));
 
             _services = new GameServiceManager(typeof(Engine).Assembly, _serviceContainer, _logFactory);
 
