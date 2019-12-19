@@ -5,14 +5,18 @@ namespace Game.Framework.Services
     using GlobExpressions;
     using System;
     using System.Collections.Generic;
+    using System.Collections.Concurrent;
     using System.IO;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
 
     [GameService]
     public interface IFileSystem : IDisposable
     {
-        IReadOnlyFile FindAsset(string asset);
+        IEnumerable<IReadOnlyFile> FindAssets(Glob pattern);
         IObservable<IReadOnlyFile> AssetTracker { get; }
 
+        IObserver<IReadOnlyFile> Observe(Glob pattern, Action<IReadOnlyFile> callback);
     }
 
     public interface IReadOnlyFile
@@ -23,63 +27,166 @@ namespace Game.Framework.Services
         Stream OpenRead();
 
         bool Exists { get; }
-
-
     }
 
-    public interface IFile : IReadOnlyFile
+    public class FileSystem : UnmanagedDispose, IFileSystem, IGameService
     {
-
-    }
-
-    public interface IAssetTrackerFactory
-    {
-
-    }
-
-    public class AssetTrackerGlob : IObserver<IReadOnlyFile>
-    {
-        private IDisposable unsubscriber;
-        private Glob _glob;
-
-        public AssetTrackerGlob(Glob _globPattern)
+        internal struct AssetFile : IReadOnlyFile
         {
-            _glob = _globPattern;
+            public int ID { get; }
+
+            public string Name { get; }
+
+            public readonly string Path;
+            public readonly string RelativePath;
+
+            public readonly DateTime LastModifiedUtc;
+
+            public AssetFile(int id, string path, string relPath, DateTime lastMod)
+            {
+                ID = id;
+                Path = path;
+                RelativePath = relPath;
+                LastModifiedUtc = lastMod;
+                Name = System.IO.Path.GetFileNameWithoutExtension(path);
+            }
+
+            public bool Exists => File.Exists(Path);
+
+            public Stream OpenRead() => File.OpenRead(Path);
+
+            public override string ToString() => $"ID: {ID}, Name: {Name}, Path: {Path}";
         }
 
-        public virtual void Subscribe(IObservable<IReadOnlyFile> provider)
+        internal class AssetTrackerGlob : IObserver<IReadOnlyFile>
         {
-            if (provider != null)
-                unsubscriber = provider.Subscribe(this);
+            private IDisposable _unsubscriber;
+            private Glob _glob;
+            private Action<IReadOnlyFile> _callback;
+
+            public AssetTrackerGlob(Glob _globPattern, Action<IReadOnlyFile> callback)
+            {
+                _glob = _globPattern;
+                _callback = callback;
+            }
+
+            public virtual void Subscribe(IObservable<IReadOnlyFile> provider)
+            {
+                if (provider != null)
+                    _unsubscriber = provider.Subscribe(this);
+            }
+
+            public void OnCompleted()
+            {
+                _unsubscriber.Dispose();
+            }
+
+            public void OnError(Exception error)
+            {
+            }
+
+            public void OnNext(IReadOnlyFile value)
+            {
+                _callback(value);
+            }
         }
 
-        public void OnCompleted()
+        internal class AssetWatcher : UnmanagedDispose, IObservable<IReadOnlyFile>
         {
-            throw new NotImplementedException();
-        }
+            private ILogger _logger;
+            private List<IObserver<IReadOnlyFile>> _observers = new List<IObserver<IReadOnlyFile>>();
+            private Dictionary<int, AssetFile> _files = new Dictionary<int, AssetFile>();
+            //private ConcurrentBag<AssetFile> _filesChanged = new ConcurrentBag<AssetFile>();
+            private string _path;
+            private Task _fileCheck;
+            private bool _isRunning = false;
 
-        public void OnError(Exception error)
-        {
-            throw new NotImplementedException();
-        }
+            public AssetWatcher(ILoggerFactory logFactory, string path)
+            {
+                _logger = logFactory.CreateLogger<AssetWatcher>();
+                _path = path;
+                if (!Path.IsPathRooted(path))
+                    _path = Path.Combine(System.Environment.CurrentDirectory, _path);
+            }
 
-        public void OnNext(IReadOnlyFile value)
-        {
-            throw new NotImplementedException();
-        }
-    }
+            private void TaskCheck()
+            {
+                System.Threading.Thread.CurrentThread.Name = "File Asset Tracker";
+                while (_isRunning)
+                {
+                    foreach (var it in Files)
+                    {
+                        if (!_files.TryGetValue(it.ID, out var file))
+                            _files.Add(it.ID, it);
 
+                        if (it.LastModifiedUtc != file.LastModifiedUtc)
+                        {
+                            _files[it.ID] = file;
+                            _logger.LogDebug($"File changed [{it.RelativePath}]");
+                            foreach (var obs in _observers)
+                                obs.OnNext(file);
+                            //_filesChanged.Add(file);
+                        }
+                    }
 
-    public class FileSystemBase : UnmanagedDispose, IFileSystem
-    {
-        internal class FileTracker : IObservable<IReadOnlyFile>
-        {
-            private List<IObserver<IReadOnlyFile>> observers = new List<IObserver<IReadOnlyFile>>();
+                    System.Threading.Thread.Sleep(100);
+                }
+            }
+
+            public void Start()
+            {
+                Contract.EqualTo(_isRunning, false);
+
+                foreach (var it in Files)
+                    _files.Add(it.ID, it);
+
+                _isRunning = true;
+                _fileCheck = Task.Run(TaskCheck);
+            }
+
+            public void Stop()
+            {
+                Contract.EqualTo(_isRunning, true);
+                _isRunning = false;
+                _fileCheck.Wait();
+            }
+
+            public IEnumerable<AssetFile> Files
+            {
+                get
+                {
+                    var dirs = new Stack<string>();
+                    dirs.Push(_path);
+
+                    while (dirs.Count > 0)
+                    {
+                        var dir = dirs.Pop();
+                        var files = Directory.GetFiles(dir);
+                        foreach (var it in Directory.GetDirectories(dir))
+                            dirs.Push(it);
+
+                        foreach (var filePath in files)
+                        {
+                            var relFile = Path.GetRelativePath(_path, filePath);
+                            var hash = Atma.HashCode.Hash(relFile);
+                            var fi = new FileInfo(filePath);
+                            yield return new AssetFile(hash, filePath, relFile, fi.LastWriteTimeUtc);
+                        }
+                    }
+                }
+            }
+
+            protected override void OnManagedDispose()
+            {
+                _isRunning = false;
+                _fileCheck.Wait();
+            }
+
             public IDisposable Subscribe(IObserver<IReadOnlyFile> observer)
             {
-                if (!observers.Contains(observer))
-                    observers.Add(observer);
-                return new Unsubscriber(observers, observer);
+                if (!_observers.Contains(observer))
+                    _observers.Add(observer);
+                return new Unsubscriber(_observers, observer);
             }
 
             private class Unsubscriber : IDisposable
@@ -101,33 +208,39 @@ namespace Game.Framework.Services
             }
         }
 
-        internal class ReadOnlyFile : IReadOnlyFile
+        private AssetWatcher _assetWatcher;
+        public IObservable<IReadOnlyFile> AssetTracker => _assetWatcher;
+
+        public FileSystem(ILoggerFactory logFactory)
         {
-            private FileSystemBase _fileSystem;
-            public int ID { get; private set; }
-            public string Name { get; private set; }
-
-            internal DateTime LastModifiedUtc { get; private set; }
-
-            public ReadOnlyFile(FileSystemBase fileSystem, string name)
-            {
-                _fileSystem = fileSystem;
-                Name = name;
-                ID = Atma.HashCode.Hash(name);
-            }
-
-            public Stream OpenRead() => File.OpenRead(Name);
-
-            public bool Exists => File.Exists(Name);
+            _assetWatcher = new AssetWatcher(logFactory, "Assets");
         }
 
-        private IObservable<IReadOnlyFile> _assetTracker = new FileTracker();
-        public IObservable<IReadOnlyFile> AssetTracker => _assetTracker;
+        public IEnumerable<IReadOnlyFile> FindAssets(Glob pattern)
+        {
+            foreach (var it in _assetWatcher.Files)
+                if (pattern.IsMatch(it.Path))
+                    yield return it;
+        }
 
-        public IReadOnlyFile FindAsset(string asset) => new ReadOnlyFile(this, asset);
+        public IObserver<IReadOnlyFile> Observe(Glob pattern, Action<IReadOnlyFile> callback)
+        {
+            return new AssetTrackerGlob(pattern, callback);
+        }
 
-        //public virtual void 
+        public void Initialize()
+        {
+            //find all files
+            _assetWatcher.Start();
+        }
 
+        public void Tick(float dt)
+        {
+        }
 
+        protected override void OnManagedDispose()
+        {
+            _assetWatcher.Stop();
+        }
     }
 }

@@ -26,7 +26,7 @@ namespace Game.Framework
 
         private SystemManager _systems;
 
-        private EventManager _events;
+        private IEventManager _events;
 
         private EntityManager _entities;
 
@@ -66,7 +66,7 @@ namespace Game.Framework
             _container.Verify();
 
             _entities = _container.GetInstance<EntityManager>();
-            _events = _container.GetInstance<EventManager>();
+            _events = _container.GetInstance<IEventManager>();
 
             _systems = _container.GetInstance<SystemManager>();
             _systems.DefaultStage = nameof(UpdateStage);
@@ -163,7 +163,7 @@ namespace Game.Framework
         public void LoadScene()
         {
             _entities.ClearAll();
-            _events.Fire(nameof(Events.LoadScene), 0f);
+            _events.Fire(nameof(Events.LoadScene));
         }
     }
 }

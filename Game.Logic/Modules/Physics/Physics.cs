@@ -9,9 +9,9 @@ namespace Game.Logic.Modules.Physics
         private float sin = 0f;
 
 
-        public Physics(EventManager events)
+        public Physics(IEventManager events)
         {
-            Track(events.Observe(nameof(Events.Tick), (float dt) => sin += dt));
+            Track(events.Subscribe<float>(nameof(Events.Tick), dt => sin += dt));
         }
 
         [Has(typeof(Sprite))]
@@ -19,7 +19,7 @@ namespace Game.Logic.Modules.Physics
         {
             var t = (sin % 2) - 1;
             scale.Width = t * t * 2 + 1;
-            scale.Height += t * t * t * t * 2 + 1;
+            scale.Height = t * t * t * t * 2 + 1;
 
 
             //position.X -= 0.1f;

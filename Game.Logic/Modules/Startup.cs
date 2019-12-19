@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Atma.Entities;
 using Atma.Events;
@@ -13,20 +14,23 @@ namespace Game.Logic
 
         private EntityManager _entities;
 
-        public Startup(EntityManager entities, EventManager events)
+        public Startup(EntityManager entities, IEventManager events)
         {
             _entities = entities;
-            Track(events.Observe<float>(nameof(Events.LoadScene), LoadScene));
+            var mi = typeof(Startup).GetMethod("LoadScene");
+            var action = (Action)mi.CreateDelegate(typeof(Action), this);
+
+            Track(events.Subscribe(nameof(Events.LoadScene), action));
 
         }
 
-        private void LoadScene(float dt)
+        public void LoadScene()
         {
             CreateWalls();
             CreateCamera(0);
         }
 
-        private void CreateWalls()
+        public void CreateWalls()
         {
             //TODO: IFileSystem
             using (var sr = File.OpenText(@"Assets\room.data"))

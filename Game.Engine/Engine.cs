@@ -90,7 +90,7 @@
             container.RegisterInstance(graphics);
             container.RegisterInstance<IAllocator>(_serviceContainer.GetInstance<IAllocator>());
             container.RegisterInstance<EntityManager>(_serviceContainer.GetInstance<EntityManager>());
-            container.RegisterInstance<EventManager>(_serviceContainer.GetInstance<EventManager>());
+            container.RegisterInstance<IEventManager>(_serviceContainer.GetInstance<IEventManager>());
 
             //logging
             container.RegisterInstance<ILoggerFactory>(_logFactory);
@@ -113,7 +113,7 @@
             _serviceContainer.Register(typeof(ILogger<>), typeof(Logger<>));
             _serviceContainer.RegisterSingleton(typeof(IAllocator), typeof(HeapAllocator));
             _serviceContainer.RegisterSingleton(typeof(EntityManager), typeof(EntityManager));
-            _serviceContainer.RegisterSingleton(typeof(EventManager), typeof(EventManager));
+            _serviceContainer.RegisterSingleton(typeof(IEventManager), typeof(EventManager));
 
             _services = new GameServiceManager(typeof(Engine).Assembly, _serviceContainer, _logFactory);
 
@@ -160,7 +160,7 @@
         }
 
 
-
+        private bool _shouldReload = false;
         protected override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -171,7 +171,14 @@
                 Exit();
 
             if (Keyboard.GetState().IsKeyDown(Keys.F12))
+                _shouldReload = true;
+
+            if (_shouldReload && Keyboard.GetState().IsKeyUp(Keys.F12))
+            {
+                _shouldReload = false;
+                _logger.LogDebug("LoadScene");
                 _gee?.LoadScene();
+            }
 
             var dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             updateTimer.Restart();
