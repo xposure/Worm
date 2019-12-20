@@ -3,11 +3,11 @@ namespace Game.Framework.Services.Graphics
     using System;
     using Atma.Math;
 
-    public enum RenderCameraType
+
+    public static class RenderCommandExtensions
     {
-        World,
-        Projection,
-        View
+        public static void SetBlendMode(this IRenderCommandBuffer it, BlendFunction blendRgba, Blend srcRgba, Blend dstRgba) => it.SetBlendMode(blendRgba, blendRgba, srcRgba, srcRgba, dstRgba, dstRgba);
+        public static void SetAlphaBlend(this IRenderCommandBuffer it) => it.SetBlendMode(BlendFunction.Add, Blend.SourceAlpha, Blend.InverseSourceAlpha);
     }
 
     [GameService]
@@ -32,5 +32,6 @@ namespace Game.Framework.Services.Graphics
         void Render();
         void SetIndexBuffer(IIndexBuffer buffer);
         void SetVertexBuffer(IVertexBuffer buffer);
+        void SetBlendMode(BlendFunction blendRgb, BlendFunction blendA, Blend srcRgb, Blend srcA, Blend dstRgb, Blend dstA);
     }
 }

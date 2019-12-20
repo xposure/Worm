@@ -7,6 +7,8 @@ namespace Game.Engine.Services
     using Game.Framework.Services.Graphics;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
+    using Blend = Framework.Services.Graphics.Blend;
+    using BlendFunction = Framework.Services.Graphics.BlendFunction;
 
     public class RenderCommandFactoryMG : Framework.Services.Graphics.IRenderCommandFactory
     {
@@ -119,7 +121,7 @@ namespace Game.Engine.Services
         private readonly GraphicsDevice _device;
         private BasicEffect _defaultEffect;
         private DepthStencilState _defaultDepth = DepthStencilState.None;
-        private BlendState _defaultBlend = BlendState.NonPremultiplied;
+        private BlendState _defaultBlend = BlendState.Opaque;
         private RasterizerState _defaultRasterizer = RasterizerState.CullNone;
         private SamplerState _defaultSampler = SamplerState.PointClamp;
 
@@ -137,8 +139,33 @@ namespace Game.Engine.Services
             _defaultEffect.VertexColorEnabled = true;
         }
 
+
+        private Dictionary<int, BlendState> _blendStateCache = new Dictionary<int, BlendState>();
+        public void SetBlendMode(BlendFunction blendRgb, BlendFunction blendA, Blend srcRgb, Blend srcA, Blend dstRgb, Blend dstA)
+        {
+            var hash = HashCode.Combine((int)blendRgb, (int)blendA, (int)srcRgb, (int)srcA, (int)dstRgb, (int)dstA);
+            if (!_blendStateCache.TryGetValue(hash, out var blendState))
+            {
+                blendState = new BlendState();
+                blendState.ColorWriteChannels = ColorWriteChannels.All;
+                blendState.ColorWriteChannels1 = ColorWriteChannels.All;
+                blendState.ColorWriteChannels2 = ColorWriteChannels.All;
+                blendState.ColorWriteChannels3 = ColorWriteChannels.All;
+                blendState.AlphaBlendFunction = (Microsoft.Xna.Framework.Graphics.BlendFunction)blendA;
+                blendState.ColorBlendFunction = (Microsoft.Xna.Framework.Graphics.BlendFunction)blendRgb;
+                blendState.ColorSourceBlend = (Microsoft.Xna.Framework.Graphics.Blend)srcRgb;
+                blendState.ColorDestinationBlend = (Microsoft.Xna.Framework.Graphics.Blend)dstRgb;
+                blendState.AlphaSourceBlend = (Microsoft.Xna.Framework.Graphics.Blend)srcA;
+                blendState.AlphaDestinationBlend = (Microsoft.Xna.Framework.Graphics.Blend)dstA;
+
+                _blendStateCache.Add(hash, blendState);
+            }
+
+            SetBlendState(blendState);
+        }
+
         private List<BlendState> _blendStates = new List<BlendState>();
-        public void SetBlendState(BlendState blendState)
+        private void SetBlendState(BlendState blendState)
         {
             var index = _blendStates.Count;
             _blendStates.Add(blendState);
@@ -381,6 +408,7 @@ namespace Game.Engine.Services
         protected override void OnUnmanagedDispose()
         {
             _defaultEffect.Dispose();
+            _blendStateCache.DisposeAll();
             _blendStates.Clear();
             _depthStates.Clear();
             _rasterizerStates.Clear();

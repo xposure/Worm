@@ -4,6 +4,7 @@ using Atma.Entities;
 using Atma.Events;
 using Atma.Math;
 using Atma.Systems;
+using Game.Framework.Services.Graphics;
 
 namespace Game.Logic
 {
@@ -13,10 +14,12 @@ namespace Game.Logic
         public const int TILE_SIZE = 4;
 
         private EntityManager _entities;
+        private ITextureFactory _textures;
 
-        public Startup(EntityManager entities)
+        public Startup(EntityManager entities, ITextureFactory textures)
         {
             _entities = entities;
+            _textures = textures;
         }
 
         [Event]
@@ -35,7 +38,7 @@ namespace Game.Logic
                 var em = _entities;
 
                 var wall2 = em.Create(wallSpec);
-                em.Replace(wall2, new Sprite(0, 100, 100) { TextureID = 0, OriginX = 0.5f, OriginY = 0.5f });
+                em.Replace(wall2, new Sprite(0, 100, 100) { TextureID = _textures["noiseTexture"].ID, OriginX = 0.5f, OriginY = 0.5f });
                 em.Replace(wall2, new Scale(1, 1));
                 em.Replace(wall2, new Position(0, 0));
                 em.Replace(wall2, Color.White);

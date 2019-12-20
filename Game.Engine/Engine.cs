@@ -91,7 +91,7 @@
             container.RegisterInstance<IAllocator>(_serviceContainer.GetInstance<IAllocator>());
             container.RegisterInstance<EntityManager>(_serviceContainer.GetInstance<EntityManager>());
             container.RegisterInstance<IEventManager>(_serviceContainer.GetInstance<IEventManager>());
-            container.RegisterInstance<IAutoEventManager>(_serviceContainer.GetInstance<AutoEventManager>());
+            container.RegisterInstance<IAutoEventManager>(_serviceContainer.GetInstance<IAutoEventManager>());
 
             //logging
             container.RegisterInstance<ILoggerFactory>(_logFactory);
@@ -203,7 +203,7 @@
 
             if (_gee != null)
             {
-                GraphicsDevice.Clear(new Color(50, 50, 50, 255));
+                GraphicsDevice.Clear(new Color(255, 255, 255, 255));
                 _gee.Draw(dt);
             }
             else

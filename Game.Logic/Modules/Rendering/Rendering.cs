@@ -97,6 +97,7 @@ namespace Game.Logic.Modules.Rendering
                 em.ForEntity((uint cameraEntity, ref Camera camera, ref Position cameraPosition) =>
                 {
                     _drawContext.Reset();
+                    _drawContext.SetAlphaBlend();
                     //_spriteBatch.SetSamplerState(SamplerState.PointClamp);
 
                     //_spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
@@ -104,6 +105,7 @@ namespace Game.Logic.Modules.Rendering
 
                     var currentTexture = _textures["default"];
                     _drawContext.SetTexture(currentTexture);
+
 
                     var texelWidth = _drawContext.TexelWidth;
                     var texelHeight = _drawContext.TexelHeight;
@@ -171,7 +173,10 @@ namespace Game.Logic.Modules.Rendering
                                     size.Height = -size.Height;
                                 }
 
-                                _drawContext.AddSprite(p, size, color, region);
+                                var c = color;
+                                c.PackedValue = c.PackedValue & 0x11111111;
+
+                                _drawContext.AddSprite(p, size, c, region);
 
                                 // //positions
                                 // if (scaleComponentIndex > -1)

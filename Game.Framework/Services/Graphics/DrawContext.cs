@@ -156,6 +156,9 @@ namespace Game.Framework.Services.Graphics
         public float TexelWidth => 1f / _currentTexture.Width;
         public float TexelHeight => 1f / _currentTexture.Height;
 
+        public void SetBlendMode(BlendFunction blendRgba, Blend srcRgba, Blend dstRgba) => _renderCommands.SetBlendMode(blendRgba, blendRgba, srcRgba, srcRgba, dstRgba, dstRgba);
+        public void SetAlphaBlend() => _renderCommands.SetBlendMode(BlendFunction.Add, Blend.SourceAlpha, Blend.InverseSourceAlpha);
+
         public void SetTexture(ITexture2D texture)
         {
             Assert.EqualTo(_isInBulkOperation, false);
