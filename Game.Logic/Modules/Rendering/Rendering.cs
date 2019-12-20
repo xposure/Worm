@@ -262,6 +262,21 @@ namespace Game.Logic.Modules.Rendering
             //     _spriteBatch.Render();
             // });
             // _debugLines.Reset();
+            ImGui();
+        }
+        private void ImGui()
+        {
+            _drawContext.Reset();
+            _drawContext.SetAlphaBlend();
+            //_spriteBatch.SetSamplerState(SamplerState.PointClamp);
+
+            //_spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
+            //_drawContext.SetCamera(float4x4.Translate(800 /2, 640/2, 0));
+
+            var currentTexture = _textures["default"];
+            _drawContext.SetTexture(currentTexture);
         }
     }
+
+
 }

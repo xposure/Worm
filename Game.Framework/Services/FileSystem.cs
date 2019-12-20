@@ -187,8 +187,8 @@ namespace Game.Framework.Services
 
             public void OnNext(IReadOnlyFile value)
             {
-                if (_glob.IsMatch(value.Name)) ;
-                _callback(value);
+                if (_glob.IsMatch(value.Name))
+                    _callback(value);
             }
 
             protected override void OnManagedDispose() => _unsubscriber?.Dispose();
