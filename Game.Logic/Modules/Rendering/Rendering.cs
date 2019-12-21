@@ -18,6 +18,7 @@ namespace Game.Logic.Modules.Rendering
         }
 
         private DrawContext _drawContext;
+        private GeometryContext _geometryContext;
         private ITextureFactory _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
@@ -41,15 +42,11 @@ namespace Game.Logic.Modules.Rendering
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
-        public SpriteRenderer(ITextureFactory texture, IDrawContextFactory drawContextFactory)
+        public SpriteRenderer(ITextureFactory texture, IGeometryContextFactory geometryContextFactory, IDrawContextFactory drawContextFactory)
         {
             _textures = texture;
-            _drawContext = drawContextFactory.CreateDrawContext();
-        }
-
-        protected override void OnManagedDispose()
-        {
-            _drawContext.Dispose();
+            Track(_drawContext = drawContextFactory.CreateDrawContext());
+            Track(_geometryContext = geometryContextFactory.CreateGeometryContext());
         }
 
         protected override void OnUnmanagedDispose()
@@ -264,17 +261,30 @@ namespace Game.Logic.Modules.Rendering
             // _debugLines.Reset();
             ImGui();
         }
-        private void ImGui()
+        private unsafe void ImGui()
         {
-            _drawContext.Reset();
-            _drawContext.SetAlphaBlend();
+            //_geometryContext.SetCamera(float4x4.Translate(-800 / 2, -480 / 2, 0));
+            _geometryContext.Reset();
+            _geometryContext.SetAlphaBlend();
             //_spriteBatch.SetSamplerState(SamplerState.PointClamp);
 
             //_spriteBatch.SetCamera(Matrix.CreateTranslation(-cameraPosition.X + (width / 2), -cameraPosition.Y + (height / 2), 0));
-            //_drawContext.SetCamera(float4x4.Translate(800 /2, 640/2, 0));
+            //_geometryContext.SetCamera(float4x4.Translate(800 /2, 640/2, 0));
 
             var currentTexture = _textures["default"];
-            _drawContext.SetTexture(currentTexture);
+            _geometryContext.SetTexture(currentTexture);
+
+            Span<float2> points = stackalloc[] {
+                new float2(100, 100),
+                new float2(200, 100),
+                new float2(200, 200),
+                new float2(175, 250),
+                new float2(125, 250),
+                new float2(100, 200)
+            };
+
+            _geometryContext.AddPolyline(points, 0x7f7f7fff, true, 1f, true);
+            _geometryContext.Render();
         }
     }
 
