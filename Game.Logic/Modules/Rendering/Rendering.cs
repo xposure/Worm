@@ -293,10 +293,10 @@ namespace Game.Logic.Modules.Rendering
             //_geometryContext.AddPolyline(points, 0x7f7f7fff, true, 1f, true);
             _imGuiTest.Update();
 
-            _imGuiTest.Button(2, 50, 50);
-            _imGuiTest.Button(2, 150, 50);
+            _imGuiTest.Button(50, 50, iteration: 2);
+            _imGuiTest.Button(150, 50);
 
-            if (_imGuiTest.Button(3, 50, 150))
+            if (_imGuiTest.Button(50, 150))
             {
 
             }
@@ -309,10 +309,13 @@ namespace Game.Logic.Modules.Rendering
             public int mousex;
             public int mousey;
             public bool mousedown;
-            public int hotitem;
-            public int activeitem;
+            public ulong hotitem;
+            public ulong activeitem;
             private GeometryContext _context;
             private IInputManager _input;
+
+            private Stack<ulong> _ids = new Stack<ulong>();
+            private ulong _currentId = 0;
 
             public ImGuiTest(IInputManager input, GeometryContext context)
             {
@@ -337,11 +340,9 @@ namespace Game.Logic.Modules.Rendering
                 else
                 {
                     if (activeitem == 0)
-                        activeitem = -1;
+                        activeitem = 0;
                 }
             }
-
-
 
             public void DrawRect(int x, int y, int w, int h, uint color)
             {
@@ -350,18 +351,34 @@ namespace Game.Logic.Modules.Rendering
                 _context.AddRectFilled(a, c, color);
             }
 
-            public bool Button(int id, int x, int y)
+            public void PushId(
+                [System.Runtime.CompilerServices.CallerMemberName] string id = "",
+                [System.Runtime.CompilerServices.CallerLineNumber] int iteration = 0)
             {
+                _ids.Push(_currentId);
+                _currentId = (uint)Atma.HashCode.Hash(id, iteration) << 16;
+            }
+
+            public void PopId()
+            {
+                _currentId = _ids.Pop();
+            }
+
+            public bool Button(int x, int y,
+                [System.Runtime.CompilerServices.CallerMemberName] string id = "",
+                [System.Runtime.CompilerServices.CallerLineNumber] int iteration = 0)
+            {
+                var cid = (_currentId << 16) + (uint)Atma.HashCode.Hash(id, iteration);
                 if (RegionHit(x, y, 64, 48))
                 {
-                    hotitem = id;
+                    hotitem = cid;
                     if (activeitem == 0 && mousedown)
-                        activeitem = id;
+                        activeitem = cid;
                 }
                 DrawRect(x + 8, y + 8, 64, 48, 0xff000000);
-                if (hotitem == id)
+                if (hotitem == cid)
                 {
-                    if (activeitem == id)
+                    if (activeitem == cid)
                     {
                         DrawRect(x + 2, y + 2, 64, 48, 0xffffffff);
                     }
@@ -375,7 +392,7 @@ namespace Game.Logic.Modules.Rendering
                     DrawRect(x, y, 64, 48, 0xffaaaaaa);
                 }
 
-                if (!mousedown && hotitem == id && activeitem == id)
+                if (!mousedown && hotitem == cid && activeitem == cid)
                     return true;
 
                 return false;
