@@ -22,6 +22,8 @@ namespace Game.Framework.Services.Graphics
 
         [VertexElement(VertexElementType.Color, VertexSemantic.Color)]
         public uint col;
+
+        public override string ToString() => $"pos: {pos}, uv: {uv}, col: {col}";
     }
 
 
@@ -175,26 +177,27 @@ namespace Game.Framework.Services.Graphics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public GeometrySegment TakePrimitives(int vertexCount, int indexCount, int primitiveCount)
+        public GeometrySegment TakePrimitives(int vertexCount, int indexCount, int primitiveCount, out int vertexPosition, out int indexPosition)
         {
-            Assert.LessThan(vertexCount, MAX_PRIMITIVES);
+            Assert.LessThan(indexCount / 3, MAX_PRIMITIVES);
             Assert.LessThan(indexCount, MAX_INDICIES);
 
-            var remaniningPrimitives = MAX_PRIMITIVES - _vertexPosition;
             var remainingIndicies = MAX_INDICIES - _indexPosition;
-            if (remaniningPrimitives > vertexCount || remainingIndicies > indexCount)
+            var remaniningPrimitives = remainingIndicies / 3;
+            if (remaniningPrimitives < primitiveCount || remainingIndicies < indexCount)
                 CompleteBuffer();
 
             var vertexSpan = _vertices.AsSpan();
             var indexSpan = _indices.AsSpan();
 
-            var vertexPos = _vertexPosition;
-            var indexPos = _indexPosition;
+            vertexPosition = _vertexPosition;
+            indexPosition = _indexPosition;
+
             _vertexPosition += vertexCount;
             _indexPosition += indexCount;
             _primitiveCount += primitiveCount;
 
-            return new GeometrySegment(vertexSpan.Slice(vertexPos, vertexCount), indexSpan.Slice(indexPos, indexCount));
+            return new GeometrySegment(vertexSpan.Slice(vertexPosition, vertexCount), indexSpan.Slice(indexPosition, indexCount));
         }
 
         private void FlushRender()
@@ -221,7 +224,7 @@ namespace Game.Framework.Services.Graphics
             }
 
             if (!lastRender)
-                UpdateNextVertexBuffer();
+                TakeNewBuffers();
         }
 
         public void Render()
@@ -237,16 +240,15 @@ namespace Game.Framework.Services.Graphics
             //TODO: renderCommand should support updating effect params (like WVP)
             _renderCommands.ResetState();
 
-            _renderCommands.SetTexture(_defaultTexture);
-            //_renderCommands.SetIndexBuffer(_indexBuffer);
-
             _currentTexture = _defaultTexture;
+            _renderCommands.SetTexture(_currentTexture);
 
-            ReturnUsedBufers();
-            UpdateNextVertexBuffer();
+            ReturnUsedVertexBuffers();
+            ReturnUsedIndexBuffers();
+            TakeNewBuffers();
         }
 
-        private void ReturnUsedBufers()
+        private void ReturnUsedVertexBuffers()
         {
             //we want to double buffer these buffers
             //i don't know if this is needed any more, but in the past
@@ -261,7 +263,22 @@ namespace Game.Framework.Services.Graphics
             buffers.Clear();
         }
 
-        private void UpdateNextVertexBuffer()
+        private void ReturnUsedIndexBuffers()
+        {
+            //we want to double buffer these buffers
+            //i don't know if this is needed any more, but in the past
+            //you could get gpu stalling when buffers were still being wrote to the gpu async
+            var buffers = _usedIndexBuffers1;
+            _usedIndexBuffers1 = _usedIndexBuffers0;
+            _usedIndexBuffers0 = buffers;
+
+            foreach (var it in buffers)
+                _indexBufferPool.Return(it);
+
+            buffers.Clear();
+        }
+
+        private void TakeNewBuffers()
         {
             _primitiveCount = 0;
 
@@ -308,7 +325,7 @@ namespace Game.Framework.Services.Graphics
         }
 
         // a: upper-left, b: lower-right
-        internal void AddRectFilled(float2 a, float2 c, uint col, float rounding = 0.0f, int rounding_corners = 0x0F)
+        public void AddRectFilled(in float2 a, in float2 c, uint col, float rounding = 0.0f, int rounding_corners = 0x0F)
         {
             if ((col >> 24) == 0)
                 return;
@@ -324,8 +341,8 @@ namespace Game.Framework.Services.Graphics
                 //var uv = new float2(-1, -1);
                 var uv = FontTexUvWhitePixel;
                 //float2 b(c.x, a.y), d(a.x, c.y), uv(GImGui->FontTexUvWhitePixel);
-                ushort idx = (ushort)_vertexPosition;
-                var geometry = TakePrimitives(4, 6, 2);
+                var geometry = TakePrimitives(4, 6, 2, out var vertexPos, out var indexPos);
+                ushort idx = (ushort)vertexPos;
                 var VtxBuffer = geometry.Vertices;
                 var IdxBuffer = geometry.Indices;
 
@@ -349,8 +366,8 @@ namespace Game.Framework.Services.Graphics
             //var uv = new float2(-1, -1);
             var uv = FontTexUvWhitePixel;
             //float2 b(c.x, a.y), d(a.x, c.y), uv(GImGui->FontTexUvWhitePixel);
-            ushort idx = (ushort)_vertexPosition;
-            var geometry = TakePrimitives(4, 6, 2);
+            var geometry = TakePrimitives(4, 6, 2, out var vertexPos, out var indexPos);
+            ushort idx = (ushort)vertexPos;
             var VtxBuffer = geometry.Vertices;
             var IdxBuffer = geometry.Indices;
 
@@ -420,12 +437,12 @@ namespace Game.Framework.Services.Graphics
                 int idx_count = (points_count - 2) * 3 + points_count * 6;
                 int vtx_count = (points_count * 2);
 
-                int vtx_inner_idx = _vertexPosition;
-                int vtx_outer_idx = _vertexPosition + 1;
                 var _VtxWritePtr = 0;
                 var _IdxWritePtr = 0;
 
-                var geometry = TakePrimitives(vtx_count, idx_count, idx_count / 3);
+                //var geometry = TakePrimitives(vtx_count, idx_count, idx_count / 3);
+                var geometry = TakePrimitives(vtx_count, idx_count, idx_count / 3, out var vtx_inner_idx, out var indexPos);
+                int vtx_outer_idx = vtx_inner_idx + 1;
 
                 var VtxBuffer = geometry.Vertices;
                 var IdxBuffer = geometry.Indices;
@@ -487,8 +504,8 @@ namespace Game.Framework.Services.Graphics
                 // Non Anti-aliased Fill
                 int idx_count = (points_count - 2) * 3;
                 int vtx_count = points_count;
-                var _VtxCurrentIdx = _vertexPosition;
-                var geometry = TakePrimitives(vtx_count, idx_count, points_count - 2);
+                //var geometry = TakePrimitives(vtx_count, idx_count, points_count - 2);
+                var geometry = TakePrimitives(vtx_count, idx_count, points_count - 2, out var _VtxCurrentIdx, out var indexPos);
                 var VtxBuffer = geometry.Vertices;
                 var IdxBuffer = geometry.Indices;
 
@@ -531,9 +548,7 @@ namespace Game.Framework.Services.Graphics
                 int idx_count = thick_line ? count * 18 : count * 12;
                 int vtx_count = thick_line ? points_count * 4 : points_count * 3;
 
-                var _VtxCurrentIdx = _indexPosition;
-
-                var geometry = TakePrimitives(vtx_count, idx_count, idx_count / 3);
+                var geometry = TakePrimitives(vtx_count, idx_count, idx_count / 3, out var vertexPos, out var _VtxCurrentIdx);
 
                 var _VtxWritePtr = 0;
                 var _IdxWritePtr = 0;
@@ -676,12 +691,11 @@ namespace Game.Framework.Services.Graphics
                 int idx_count = count * 6;
                 int vtx_count = count * 4;      // FIXME-OPT: Not sharing edges
 
-                var geometry = TakePrimitives(vtx_count, idx_count, count);
+                var geometry = TakePrimitives(vtx_count, idx_count, count, out var _VtxCurrentIdx, out var indexPos);
                 var _VtxWritePtr = 0;
                 var _IdxWritePtr = 0;
                 var VtxBuffer = geometry.Vertices;
                 var IdxBuffer = geometry.Indices;
-                var _VtxCurrentIdx = _vertexPosition;
 
                 for (int i1 = 0; i1 < count; i1++)
                 {

@@ -127,6 +127,10 @@
 
             _geeReloadTask = Task.Run(() => CheckGEE());
             base.Initialize();
+
+            Window.AllowUserResizing = true;
+            Window.IsBorderless = true;
+            Window.AllowAltF4 = true;
         }
 
         private void Reload()

@@ -6,6 +6,7 @@ namespace Game.Logic.Modules.Rendering
     using Atma.Math;
     using Atma.Systems;
     using Game.Framework;
+    using Game.Framework.Services;
     using Game.Framework.Services.Graphics;
 
     [Stages(nameof(RenderStage))]
@@ -19,9 +20,13 @@ namespace Game.Logic.Modules.Rendering
 
         private DrawContext _drawContext;
         private GeometryContext _geometryContext;
+        private IInputManager _input;
+        private ImGuiTest _imGuiTest;
         private ITextureFactory _textures;
         //private IAllocator _allocator;
         private EntitySpec _renderSpec;
+
+
 
         private List<EntityChunkList> _renderOrder = new List<EntityChunkList>();
         private Comparison<EntityChunkList> _renderSort;
@@ -42,11 +47,13 @@ namespace Game.Logic.Modules.Rendering
         //     _debugLines.Add(new DebugLine() { Min = tr, Max = br, Color = color });
         // }
 
-        public SpriteRenderer(ITextureFactory texture, IGeometryContextFactory geometryContextFactory, IDrawContextFactory drawContextFactory)
+        public SpriteRenderer(IInputManager input, ITextureFactory texture, IGeometryContextFactory geometryContextFactory, IDrawContextFactory drawContextFactory)
         {
             _textures = texture;
             Track(_drawContext = drawContextFactory.CreateDrawContext());
             Track(_geometryContext = geometryContextFactory.CreateGeometryContext());
+            _input = input;
+            _imGuiTest = new ImGuiTest(_input, _geometryContext);
         }
 
         protected override void OnUnmanagedDispose()
@@ -283,9 +290,113 @@ namespace Game.Logic.Modules.Rendering
                 new float2(100, 200)
             };
 
-            _geometryContext.AddPolyline(points, 0x7f7f7fff, true, 1f, true);
-            _geometryContext.Render();
+            //_geometryContext.AddPolyline(points, 0x7f7f7fff, true, 1f, true);
+            _imGuiTest.Update();
+
+            _imGuiTest.Button(2, 50, 50);
+            _imGuiTest.Button(2, 150, 50);
+
+            if (_imGuiTest.Button(3, 50, 150))
+            {
+
+            }
+
+            _imGuiTest.Render();
         }
+
+        public class ImGuiTest
+        {
+            public int mousex;
+            public int mousey;
+            public bool mousedown;
+            public int hotitem;
+            public int activeitem;
+            private GeometryContext _context;
+            private IInputManager _input;
+
+            public ImGuiTest(IInputManager input, GeometryContext context)
+            {
+                _input = input;
+                _context = context;
+            }
+
+            public void Update()
+            {
+                mousex = _input.MousePosition.x;
+                mousey = _input.MousePosition.y;
+                mousedown = _input.IsMouseDown(MouseButton.Left);
+                hotitem = 0;
+            }
+
+            public void Render()
+            {
+                _context.Render();
+
+                if (!mousedown)
+                    activeitem = 0;
+                else
+                {
+                    if (activeitem == 0)
+                        activeitem = -1;
+                }
+            }
+
+
+
+            public void DrawRect(int x, int y, int w, int h, uint color)
+            {
+                var a = new float2(x, y);
+                var c = new float2(x + w, y + h);
+                _context.AddRectFilled(a, c, color);
+            }
+
+            public bool Button(int id, int x, int y)
+            {
+                if (RegionHit(x, y, 64, 48))
+                {
+                    hotitem = id;
+                    if (activeitem == 0 && mousedown)
+                        activeitem = id;
+                }
+                DrawRect(x + 8, y + 8, 64, 48, 0xff000000);
+                if (hotitem == id)
+                {
+                    if (activeitem == id)
+                    {
+                        DrawRect(x + 2, y + 2, 64, 48, 0xffffffff);
+                    }
+                    else
+                    {
+                        DrawRect(x, y, 64, 48, 0xffffffff);
+                    }
+                }
+                else
+                {
+                    DrawRect(x, y, 64, 48, 0xffaaaaaa);
+                }
+
+                if (!mousedown && hotitem == id && activeitem == id)
+                    return true;
+
+                return false;
+            }
+
+            public bool RegionHit(int x, int y, int w, int h)
+            {
+                if (mousex < x || mousey < y || mousex >= x + w || mousey >= y + h)
+                    return false;
+
+                return true;
+            }
+
+
+        }
+
+        // private bool HitTest(in AxisAlignedBox2i box2, int x, int y)
+        // {
+
+
+        // }
     }
 
 
